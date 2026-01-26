@@ -1,0 +1,38 @@
+ID,Category,Title,Description,Incoming_Links,Outgoing_Links
+F-010,Functional,Import Source,"The system shall import trade data from CapTrader 'Activity Statements' provided in CSV format. The import process must support the 'Complex/Details' mode to ensure all necessary fields are available.",,S-IO-010
+F-020,Functional,Incremental Updates,"The system must be idempotent; when running the import on the same file multiple times, it shall ignore duplicates and not create redundant entries in the output.",,S-ALG-020
+F-030,Functional,Data Persistence,"All extracted data must be centrally stored in a trades.xml file, which serves as the 'Single Source of Truth' for downstream analysis.",,S-DAT-010
+F-040,Functional,Dividends,"The system shall detect dividend payments within the CSV and store them in a dedicated <Dividends> section in the XML.",,"S-DAT-025; S-IO-030"
+F-050,Functional,Cash Flow,"Transactions representing deposits or withdrawals must be identified and stored in a specific section to allow for transparent tracking of capital flows.",,"S-DAT-026; S-IO-035"
+F-060,Functional,Commission Extraction,"All transaction fees (commissions) must be extracted from the CSV and stored as a separate <Commission> tag for each trade.",,"S-IO-020; S-ALG-010"
+F-070,Functional,Instrument Metadata,"The system shall extract descriptive metadata for each traded instrument, specifically the full Name and a unique Identifier (ID, e.g., ISIN). This data is available in the 'Financial Instrument Information' section of the source CSV.",,"S-IO-040; S-DAT-050"
+F-080,Functional,File Archiving,"After a CSV file has been successfully processed and its data has been added, the system must move the source file to an oldcsv directory to prevent re-processing.",,S-IO-100
+F-290,Functional,Ticker Mapping,"The system must be able to normalize historical ticker symbols to their current equivalents (e.g., mapping '4GLD' to 'GLD') to ensure continuity in history.",,S-ALG-215
+D-010,Data,Semantic XML,"The output XML shall be logically grouped (e.g., Meta, Instrument, Execution) to maximize human readability and machine parsing.",,S-DAT-020
+D-020,Data,Data Completeness,"All critical trade fields must be preserved, including Symbol, Date, Quantity, Price, Fees, and Proceeds.",,"S-DAT-020; S-IO-020"
+D-030,Data,Numeric Format,"Numeric values in the XML output must use German notation (comma as the decimal separator) to align with downstream Excel/local tools.",,S-DAT-030
+D-040,Data,Date Format,"Dates shall be formatted as DD.MM.YYYY. The time of execution must be stored separately in HH:MM:SS format.",,S-DAT-040
+D-050,Data,Identification,"The system must generate deterministic IDs (hashes) for every transaction to allow for reliable deduplication and referencing.",,"S-ALG-010; S-ALG-015"
+D-060,Data,Currency,"Original currencies must be preserved; no currency conversion should be performed during the import.",,S-IO-020
+D-230,Data,Input Map,"Optionally, the system shall read a ticker_map.json file to retrieve renaming rules for tickers.",,S-IO-220
+UI-010,Interface,CLI & Auto-Discovery,"The tool shall operate as a Command Line Interface (CLI). It should accept a file path as an argument or automatically discover the most recent CSV file in the working directory.",,"S-UI-010; S-IO-005"
+S-UI-010,Interface (Spec),CLI Arguments,"The script checks sys.argv. If an argument is provided, it is treated as the target filename.",UI-010,TC-010
+S-IO-005,I/O (Spec),Auto-Discovery,"If no argument is provided, the script scans the directory for *.csv files and selects the one with the most recent modification time.",UI-010,TC-015
+S-IO-010,I/O (Spec),Section Parsing,"The parser iterates through the CSV rows, detecting section headers (e.g., 'Trades', 'Dividends') to switch its parsing logic contextually.",F-010,TC-010
+S-IO-040,I/O (Spec),Metadata Parsing,"The parser shall identify the section header 'Informationen zum Finanzinstrument'. It will iterate through this section to build a dictionary mapping the 'Symbol' to its 'Beschreibung' (Name) and 'Wertpapier-ID' (ISIN/ID).",F-070,TC-095
+S-IO-020,I/O (Spec),Trade Mapping,"Specific columns are mapped to object fields. 'Quantity' > 0 denotes a Buy. Commission columns are aggregated.","D-020; F-060","TC-050; TC-090"
+S-IO-030,I/O (Spec),Dividend Mapping,"Parses the Dividend section, extracting amount, currency, and date.",F-040,TC-060
+S-IO-035,I/O (Spec),Deposit Mapping,"Parses the 'Deposits & Withdrawals' section for cash flow entries.",F-050,TC-065
+S-IO-100,I/O (Spec),Archive Processed File,"Upon successful processing (if new data was written), the script moves the source CSV file into the ./oldcsv/ directory using os.rename.",F-080,TC-110
+S-IO-220,I/O (Spec),Load Map,"On startup, the system checks for ticker_map.json. If found, it loads it into a dictionary mapping = {""OLD"": ""NEW""}.",D-230,TC-080
+S-DAT-010,Struct (Spec),XML Root,"The root element <TradeLog> shall contain children <Trades> and <Dividends>.",F-030,TC-010
+S-DAT-020,Struct (Spec),Trade Element,"Trades are stored as <Trade id=""...""> with sub-elements for details.",D-010,TC-010
+S-DAT-025,Struct (Spec),Div Element,"Dividends are stored as <Dividend id=""..."">.",F-040,TC-060
+S-DAT-026,Struct (Spec),Dep Element,"Cash flows are stored as <Transaction id=""..."">.",F-050,TC-065
+S-DAT-050,Struct (Spec),XML Enrichment,"During the generation of the <Trade> element, the system looks up the metadata using the symbol. It injects the attributes name=""..."" and id=""..."" into the tag.",F-070,TC-095
+S-DAT-030,Logic (Spec),Num Format,"Python floats are converted to strings, replacing periods with commas.",D-030,TC-030
+S-DAT-040,Logic (Spec),Date Format,"Timestamps are split into <Date> (DD.MM.YYYY) and <Time> (HH:MM:SS) tags.",D-040,TC-040
+S-ALG-010,Algo (Spec),ID-Hash Trade,"The Trade ID is generated via MD5 hash of (Date + Symbol + Qty + Gross + Commission).",D-050,TC-020
+S-ALG-015,Algo (Spec),ID-Hash Div,"The Dividend ID is generated via MD5 hash of (Date + Symbol + Amount + Description).",D-050,TC-060
+S-ALG-020,Algo (Spec),Deduplication,"New items are checked against a set of existing IDs to prevent duplicates.",F-020,TC-020
+S-ALG-215,Algo (Spec),Normalization,"Before processing, the Symbol is checked against the mapping dictionary. If a match is found, it is replaced by the new value.",F-290,TC-070
