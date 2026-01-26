@@ -11,7 +11,7 @@ import json
 """
 ###############################################################################
 # PnL Tracker 2.0 - Implementation (German Patch)
-# Status: FROZEN | Version: 3.4
+# Status: UPDATED | Version: 3.5 (Fix: Anti-Redundancy Logic)
 ###############################################################################
 """
 
@@ -23,15 +23,20 @@ def get_file_path():
     parser = argparse.ArgumentParser(description="PnL Tracker 2.0 - Import CapTrader CSV")
     parser.add_argument("file", nargs="?", help="Path to CapTrader CSV file")
     args = parser.parse_args()
+    
+    ACCOUNT_ID_PREFIX = "U16537315"
 
     if args.file:
+        if not os.path.basename(args.file).startswith(ACCOUNT_ID_PREFIX):
+            print(f"-> [TC-150] Error: Invalid filename. Must start with '{ACCOUNT_ID_PREFIX}'.")
+            return None
         print(f"-> [TC-010] Explicit file provided: {args.file}")
         return args.file
     
-    # Find the newest file in the root directory
-    all_csvs = glob.glob("*.csv")
+    # Find the newest file in the root directory matching the prefix
+    all_csvs = glob.glob(f"{ACCOUNT_ID_PREFIX}*.csv")
     if not all_csvs:
-        print("Error: No CSV files found in the project root directory.")
+        print(f"Error: No valid CSV files (starting with '{ACCOUNT_ID_PREFIX}') found.")
         return None
 
     newest_file = max(all_csvs, key=os.path.getmtime)
@@ -130,6 +135,8 @@ def process_csv(filepath, existing_ids, ticker_map):
                         if trade_id in existing_ids: continue
 
                         date_fmt, time_fmt = parse_date_time(raw_date)
+                        
+                        # [D-070] Internal Terminology: We use 'commission' strictly here.
                         new_trades.append({
                             "id": trade_id, "date": date_fmt, "time": time_fmt,
                             "symbol": sym, "currency": row[headers["Währung"]],
@@ -215,9 +222,16 @@ def update_xml(new_trades, new_divs, new_deposits, instrument_metadata):
         ET.SubElement(instr, "Symbol").text = t["symbol"]
         ET.SubElement(instr, "Currency").text = t["currency"]
         ex = ET.SubElement(t_elem, "Execution")
+        
+        # [S-DAT-060] Anti-Redundancy Logic:
+        # We explicitly exclude 'commission' here to prevent it from being generated 
+        # as a generic tag, since we add it explicitly below.
+        blacklist = ['id', 'date', 'time', 'symbol', 'currency', 'qty', 'price', 'commission', 'proceeds']
+        
         for key, val in t.items():
-            if key not in ['id', 'date', 'time', 'symbol', 'currency', 'qty', 'price', 'fee', 'proceeds']:
+            if key not in blacklist:
                  ET.SubElement(ex, key.capitalize()).text = val
+
         ET.SubElement(ex, "Quantity").text = t['qty']
         ET.SubElement(ex, "Price").text = t['price']
         ET.SubElement(ex, "Commission").text = t['commission']
@@ -250,7 +264,7 @@ def update_xml(new_trades, new_divs, new_deposits, instrument_metadata):
 
 
 def main():
-    print("--- PnL Tracker 2.0 (German Edition v3.4) ---")
+    print("--- PnL Tracker 2.0 (German Edition v3.5) ---")
     
     ticker_map = {}
     if os.path.exists(TICKER_MAP_FILE):
