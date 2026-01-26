@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PnL Tracker 2.0 - Modul 3: Market Data Fetcher</title>
+    <style>
+        /* --- GRUNDLAYOUT (Blaues Theme für Modul 3) --- */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f6f8;
+        }
+
+        h1 {
+            color: #2980b9; /* Blau für Modul 3 */
+            border-bottom: 3px solid #2980b9;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-top: 50px;
+            background-color: #e3f2fd;
+            color: #1565c0;
+            padding: 12px 15px;
+            border-left: 6px solid #1565c0;
+            border-radius: 0 4px 4px 0;
+            font-size: 1.2em;
+        }
+
+        h3 {
+            color: #455a64;
+            margin-top: 30px;
+            border-bottom: 1px solid #cfd8dc;
+            padding-bottom: 5px;
+        }
+
+        p, li {
+            max-width: 900px;
+            color: #444;
+        }
+
+        /* --- TABELLEN DESIGN --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 40px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+            text-align: left;
+            padding: 14px 12px;
+            font-weight: 600;
+            border-bottom: 2px solid #2980b9;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eceff1;
+            vertical-align: top;
+        }
+
+        tr:hover {
+            background-color: #e1f5fe;
+        }
+
+        /* --- INTERAKTIVITÄT & FLASH-EFFEKT --- */
+        tr[id] {
+            scroll-margin-top: 60px;
+        }
+
+        :target {
+            animation: flash-highlight 2.5s ease-out;
+            border-left: 4px solid #f9a825;
+        }
+
+        @keyframes flash-highlight {
+            0% { background-color: #fff176; }
+            30% { background-color: #fff59d; }
+            100% { background-color: transparent; }
+        }
+
+        /* --- SPALTEN & BADGES --- */
+        .id-col {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-weight: 700;
+            color: #455a64;
+            width: 90px;
+            background-color: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .req { background-color: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+        .spec { background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }
+        .test { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+
+        /* --- LINKS --- */
+        .trace-link {
+            display: inline-block;
+            background-color: #fff;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            text-decoration: none;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .trace-link:hover {
+            background-color: #2196f3;
+            color: white;
+            border-color: #1e88e5;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>PnL Tracker 2.0 - Modul 3: Market Data Fetcher - Dokumentation</h1>
+    <p>
+        Status: <strong>FROZEN</strong> | Version: <strong>1.10</strong> <br>
+        Fokus: <strong>Batch-Args, Split-Storage, Auto-FX & Robust UX</strong>
+    </p>
+
+    <h3>Projektkontext</h3>
+    <p>
+        Modul 3 ist der "Daten-Motor" des Systems. Es löst ISINs in Ticker auf, lädt historische Kurse und verwaltet Wechselkurse. 
+        Um Performanzprobleme bei wachsenden Datenmengen zu vermeiden, speichert es jeden Ticker in einer eigenen Datei ("Split Storage"). 
+        Es akzeptiert Listen von Tickern zur Stapelverarbeitung, stellt durch automatische Updates stets aktuelle Wechselkurse bereit 
+        und kommuniziert über ein modernes Terminal-Interface (Spinner/Progress Bar) transparent mit dem Benutzer.
+    </p>
+
+    <h2>1. Anforderungen (Requirements)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Kategorie</th>
+                <th>Titel</th>
+                <th>Beschreibung</th>
+                <th>Implemented By</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="F-310"><td class="id-col">F-310</td><td><span class="badge req">Funktion</span></td><td>Multi-Source Provider</td><td>Integration redundanter Quellen (Yahoo Finance, Alpha Vantage, Twelve Data). Automatische Fallback-Strategie ("Provider Chain") bei Ausfall.</td><td><a href="#S-ALG-310" class="trace-link">S-ALG-310</a></td></tr>
+            <tr id="F-320"><td class="id-col">F-320</td><td><span class="badge req">Funktion</span></td><td>Zeitraum pro Ticker</td><td>Möglichkeit, für jedes Instrument einen individuellen Zeitraum (Start, End) abzufragen.</td><td><a href="#S-IO-320" class="trace-link">S-IO-320</a></td></tr>
+            <tr id="F-330"><td class="id-col">F-330</td><td><span class="badge req">Funktion</span></td><td>Daily Candles</td><td>Standard-Abruf sind Tageskerzen (OHLCV). Dies gilt auch für Währungen.</td><td><a href="#S-ALG-310" class="trace-link">S-ALG-310</a></td></tr>
+            <tr id="F-340"><td class="id-col">F-340</td><td><span class="badge req">Funktion</span></td><td>ISIN Resolution</td><td>Das System akzeptiert ISINs (aus <code>trades.xml</code>). Es löst diese automatisch über API-Suchen in handelbare Ticker auf.</td><td><a href="#S-ALG-325" class="trace-link">S-ALG-325</a></td></tr>
+            <tr id="F-350"><td class="id-col">F-350</td><td><span class="badge req">Funktion</span></td><td>Smart Caching</td><td>Download erfolgt nur, wenn der lokale Stand veraltet ist (Vortag). Spart Traffic.</td><td><a href="#S-ALG-330" class="trace-link">S-ALG-330</a></td></tr>
+            <tr id="F-355"><td class="id-col">F-355</td><td><span class="badge req">Funktion</span></td><td>Split Storage</td><td>Speicherung pro Ticker/ISIN in separaten JSON-Dateien für Skalierbarkeit.</td><td><a href="#D-320" class="trace-link">D-320</a></td></tr>
+            <tr id="F-360"><td class="id-col">F-360</td><td><span class="badge req">Funktion</span></td><td>API Management</td><td>Sichere Verwaltung von API-Keys (via Config-File).</td><td><a href="#S-IO-310" class="trace-link">S-IO-310</a></td></tr>
+            <tr id="F-370"><td class="id-col">F-370</td><td><span class="badge req">Funktion</span></td><td>FX Auto-Update</td><td>Der USD/EUR-Wechselkurs wird bei <strong>jedem</strong> Skript-Aufruf geprüft. Ist der Cache veraltet (Vortag), wird er <em>vor</em> der Verarbeitung der Argumente aktualisiert.</td><td><a href="#S-ALG-340" class="trace-link">S-ALG-340</a></td></tr>
+            <tr id="F-380"><td class="id-col">F-380</td><td><span class="badge req">Funktion</span></td><td>Timeout-Handling</td><td>Jede Netzwerkanfrage hat ein striktes Zeitlimit. Hängende Verbindungen werden abgebrochen.</td><td><a href="#S-IO-330" class="trace-link">S-IO-330</a></td></tr>
+            <tr id="F-400"><td class="id-col">F-400</td><td><span class="badge req">UI/UX</span></td><td>Live-Feedback</td><td>Das Terminal zeigt Spinner, Fortschrittsbalken und Countdowns. Keine "eingefrorenen" Bildschirme.</td><td><a href="#S-UI-330" class="trace-link">S-UI-330</a></td></tr>
+            <tr id="F-410"><td class="id-col">F-410</td><td><span class="badge req">UI/UX</span></td><td>Structured Logging</td><td>Farbcodierte Ausgaben (Grün=Erfolg, Rot=Fehler) via `rich` Library.</td><td><a href="#S-UI-330" class="trace-link">S-UI-330</a></td></tr>
+            <tr id="D-310"><td class="id-col">D-310</td><td><span class="badge req">Daten</span></td><td>Datenintegrität</td><td>Jede JSON-Datei enthält Metadaten und die Zeitreihe.</td><td><a href="#S-DAT-310" class="trace-link">S-DAT-310</a></td></tr>
+            <tr id="UI-310"><td class="id-col">UI-310</td><td><span class="badge req">UI</span></td><td>CLI Batch Input</td><td>Das CLI akzeptiert eine <strong>Liste</strong> von Argumenten (Ticker/ISINs) in einem Aufruf ("varargs"). Optional mit Datumsfilter pro Argument.</td><td><a href="#S-IO-320" class="trace-link">S-IO-320</a></td></tr>
+        </tbody>
+    </table>
+
+    <h2>2. Spezifikationen (Specifications)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Modul</th>
+                <th>Titel</th>
+                <th>Technische Umsetzung</th>
+                <th>Traceability</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="D-320"><td class="id-col">D-320</td><td><span class="badge spec">Strukt</span></td><td>File Layout</td><td>Ordner <code>data/</code>.<br>1. <code>index.json</code>: Mapping ISIN->Ticker & Last-Update-Info.<br>2. <code>market/DE000....json</code>: Einzeldateien pro Asset.<br>3. <code>market/USDEUR.json</code>: Separate Datei für FX.</td><td><a href="#F-355" class="trace-link">F-355</a></td></tr>
+            <tr id="S-DAT-310"><td class="id-col">S-DAT-310</td><td><span class="badge spec">Strukt</span></td><td>Asset JSON</td><td>Inhalt pro File: <code>{"meta": {"ticker": "...", "currency": "..."}, "history": [{"date": "...", "close": 12.5}, ...]}</code>.</td><td><a href="#D-310" class="trace-link">D-310</a></td></tr>
+            <tr id="S-ALG-310"><td class="id-col">S-ALG-310</td><td><span class="badge spec">Algo</span></td><td>Provider Chain</td><td>Liste: [Yahoo, AlphaVantage]. Sequenzielle Abarbeitung (keine Parallelisierung innerhalb eines Tickers). Iteriere bei Fehler.</td><td><a href="#F-310" class="trace-link">F-310</a></td></tr>
+            <tr id="S-ALG-325"><td class="id-col">S-ALG-325</td><td><span class="badge spec">Algo</span></td><td>ISIN Resolver</td><td>Eingabe ISIN -> Check <code>index.json</code>. Wenn fehlt -> API Search -> Update <code>index.json</code>.</td><td><a href="#F-340" class="trace-link">F-340</a></td></tr>
+            <tr id="S-ALG-330"><td class="id-col">S-ALG-330</td><td><span class="badge spec">Algo</span></td><td>Cache Logic</td><td>Lese JSON. Wenn <code>last_update</code> < Heute (und Markt zu) -> Fetch & Append & Save.</td><td><a href="#F-350" class="trace-link">F-350</a></td></tr>
+            <tr id="S-ALG-340"><td class="id-col">S-ALG-340</td><td><span class="badge spec">Algo</span></td><td><strong>Auto-FX</strong></td><td><strong>Init-Phase:</strong> Bevor CLI-Argumente verarbeitet werden:<br>Lade <code>data/market/USDEUR.json</code>. Ist Cache veraltet? -> Starte Update für <code>EUR=X</code>.</td><td><a href="#F-370" class="trace-link">F-370</a></td></tr>
+            <tr id="S-IO-310"><td class="id-col">S-IO-310</td><td><span class="badge spec">I/O</span></td><td>Config Loader</td><td>Lade <code>providers.json</code>.</td><td><a href="#F-360" class="trace-link">F-360</a></td></tr>
+            <tr id="S-IO-330"><td class="id-col">S-IO-330</td><td><span class="badge spec">I/O</span></td><td>Network</td><td>Global Timeout 10s. Retry-Adapter.</td><td><a href="#F-380" class="trace-link">F-380</a></td></tr>
+            <tr id="S-IO-320"><td class="id-col">S-IO-320</td><td><span class="badge spec">I/O</span></td><td>Arg Parser</td><td>Verwende <code>argparse</code> mit <code>nargs='+'</code> (Liste). Iteration über Eingaben. Splitting von <code>ID:START:END</code> pro Eintrag.</td><td><a href="#UI-310" class="trace-link">UI-310</a></td></tr>
+            <tr id="S-UI-330"><td class="id-col">S-UI-330</td><td><span class="badge spec">UI</span></td><td>Rich UI</td><td>Progress Bar (via `rich.track`) über die Argument-Liste. Spinner für einzelnen Fetch.</td><td><a href="#F-400" class="trace-link">F-400</a></td></tr>
+        </tbody>
+    </table>
+
+    <h2>3. Test-Spezifikation (Test Cases)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Titel</th>
+                <th>Ablauf & Erwartung</th>
+                <th>Traceability</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr id="TC-310"><td class="id-col">TC-310</td><td><span class="badge test">Batch-Args</span></td><td>Aufruf: <code>python market.py AAPL MSFT DE000...</code>.<br>Erwartung: Skript iteriert 3x, Progressbar läuft von 0 auf 100%. 3 separate JSON-Files werden angelegt/aktualisiert.</td><td><a href="#UI-310" class="trace-link">UI-310</a></td></tr>
+            <tr id="TC-340"><td class="id-col">TC-340</td><td><span class="badge test">ISIN-Split</span></td><td>Lade Daten für neue ISIN. Erwartung: <code>index.json</code> wird aktualisiert, neue Datei <code>data/market/ISIN.json</code> wird erstellt.</td><td><a href="#D-320" class="trace-link">D-320</a></td></tr>
+            <tr id="TC-370"><td class="id-col">TC-370</td><td><span class="badge test">FX-Init</span></td><td>Setze Datum von <code>USDEUR.json</code> auf Gestern. Starte Skript mit Argument für eine <em>andere</em> Aktie. Erwartung: FX wird trotzdem zuerst aktualisiert.</td><td><a href="#S-ALG-340" class="trace-link">S-ALG-340</a></td></tr>
+            <tr id="TC-380"><td class="id-col">TC-380</td><td><span class="badge test">Timeout</span></td><td>Simuliere Latenz. Erwartung: UI zeigt Spinner/Timer, bricht nach 10s ab.</td><td><a href="#F-380" class="trace-link">F-380</a></td></tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

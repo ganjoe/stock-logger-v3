@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>microALM: PnL Tracker CSV Parser</title>
+    <style>
+        /* --- THEME VARIABLES (Dark/High Contrast) --- */
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --text-main: #c9d1d9;
+            --text-dim: #8b949e;
+            --accent-primary: #00ff41; 
+            --accent-secondary: #58a6ff; 
+            --border-color: #30363d;
+            --header-bg: #21262d;
+            --highlight-flash: #2ea043;
+        }
+
+        /* --- BASIC LAYOUT --- */
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-main);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+        }
+
+        h1 {
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- COLLAPSIBLE HEADERS --- */
+        .collapsible-header {
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .collapsible-header:hover {
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+        }
+
+        .collapsible-header::after {
+            content: '[ - ]';
+            font-size: 0.8em;
+            float: right;
+            margin-right: 10px;
+            color: var(--accent-secondary);
+        }
+
+        .collapsible-header.collapsed::after {
+            content: '[ + ]';
+            color: var(--text-dim);
+        }
+
+        .collapsible-content {
+            display: none;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border-left: 1px dashed var(--border-color);
+            padding-left: 15px;
+            /* --- MOBILE SCROLLING FIX --- */
+            overflow-x: auto; /* Allows horizontal scroll */
+            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+        }
+
+        h2.collapsible-header {
+            margin-top: 40px;
+            background-color: var(--header-bg);
+            color: #ffffff;
+            padding: 10px 15px;
+            border-left: 4px solid var(--accent-secondary);
+        }
+
+        h3.collapsible-header {
+            color: var(--text-main);
+            margin-top: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 5px;
+        }
+
+        p, li {
+            max-width: 900px;
+            color: var(--text-main);
+        }
+
+        code {
+            background-color: rgba(110, 118, 129, 0.4);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            color: var(--accent-secondary);
+        }
+
+        /* --- TABLE DESIGN --- */
+        table {
+            width: 100%;
+            /* Ensure table is wide enough to force scroll on small screens */
+            min-width: 800px; 
+            border-collapse: collapse;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        th {
+            background-color: #21262d;
+            color: var(--accent-primary);
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--accent-primary);
+            white-space: nowrap; /* Prevent headers from wrapping too aggressively */
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        tr:hover {
+            background-color: #30363d;
+        }
+
+        /* --- INTERACTIVITY & FLASH EFFECT --- */
+        tr[id] {
+            scroll-margin-top: 100px;
+        }
+
+        :target {
+            animation: flash-highlight 2s ease-out;
+            border: 1px solid var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        @keyframes flash-highlight {
+            0% { background-color: var(--highlight-flash); color: white; }
+            100% { background-color: transparent; }
+        }
+
+        /* --- EDITING MODE STYLES --- */
+        [contenteditable="true"] {
+            outline: 1px dashed var(--accent-secondary);
+            background-color: #0d1117;
+            padding: 5px;
+            color: #fff;
+        }
+
+        /* --- ACTION BAR --- */
+        .action-bar {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #161b22;
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            /* Stick action bar to left or allow wrap */
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 6px 15px;
+            border: 1px solid var(--border-color);
+            background-color: #21262d;
+            color: var(--text-main);
+            cursor: pointer;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+            background-color: #30363d;
+        }
+
+        .btn-add { border-color: #238636; color: #238636; }
+        .btn-add:hover { background-color: #238636; color: white; }
+
+        .btn-edit { border-color: #d29922; color: #d29922; }
+        .btn-edit:hover { background-color: #d29922; color: white; }
+
+        .btn-save { background-color: var(--accent-secondary); color: #000; border-color: var(--accent-secondary); display: none; font-weight: bold;}
+        .btn-save:hover { background-color: #79c0ff; }
+
+        /* --- BADGES & TRACE LINKS --- */
+        .id-col {
+            font-weight: 700;
+            color: var(--accent-secondary);
+            width: 120px;
+            min-width: 100px;
+        }
+
+        .badge { 
+            display: inline-block; padding: 2px 6px; border-radius: 4px; 
+            font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid;
+        }
+        .req { border-color: #1f6feb; color: #58a6ff; }
+        .spec { border-color: #8957e5; color: #d2a8ff; }
+        .test { border-color: #238636; color: #3fb950; }
+        .edit { border-color: #d29922; color: #d29922; }
+        .des  { border-color: #f778ba; color: #f778ba; }
+
+        .trace-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--accent-primary);
+            transition: all 0.2s;
+        }
+        .trace-link:hover {
+            background-color: var(--accent-primary);
+            color: #000;
+        }
+
+        /* --- MOBILE TWEAKS --- */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.4rem; }
+            /* On mobile, headers should be clearly touchable */
+            .collapsible-header { padding: 15px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1 contenteditable="false">microALM: PnL Tracker CSV Parser</h1>
+    <p contenteditable="false">
+        Status: <strong>ACTIVE</strong> | Version: <strong>3.3</strong> <br>
+        Focus: <strong>CapTrader CSV to XML (Mobile Ready)</strong>
+    </p>
+
+    <h3 class="collapsible-header">1. Philosophy &amp; Usage</h3>
+    <div class="collapsible-content" style="display: block;">
+        <p>
+            This document serves as the migrated documentation for the PnL Tracker 3.0 (CSV Importer) in the <strong>microALM format</strong>. 
+            Its primary goal is to define the logic for parsing CapTrader/IBKR CSV files and converting them into a structured XML format (Single Source of Truth).
+        </p>
+        <h4>Core Concepts:</h4>
+        <ul>
+            <li><strong>Single Source of Truth:</strong> The parser converts raw CSV data into a standardized <code>trades.xml</code> file.</li>
+            <li><strong>Auto-Integrity:</strong> The document calculates its own SHA-256 hash to ensure the integrity of the requirements.</li>
+            <li><strong>Living Document:</strong> Requirements, specifications, and test cases can be edited directly within the browser.</li>
+        </ul>
+    <div class="action-bar">
+                    <button class="btn btn-add">[+] Add Row</button>
+                    <button class="btn btn-edit">_Edit</button>
+                    <button class="btn btn-save">!Save</button>
+                    <button class="btn btn-dl">v Download</button>
+                </div></div>
+
+    <h2 class="collapsible-header">2. Sidecar Definition</h2>
+    <div class="collapsible-content" style="display: block;">
+        <p>This section lists all linked artifacts (Sidecars) and their integrity hashes.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Link (URI/Path)</th>
+                    <th>#Hash (Integrity)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background-color: #21262d;" contenteditable="false">
+                    <td class="id-col">SELF</td>
+                    <td>./microALM_csv_parser.html</td>
+                    <td id="self-hash" style="font-family: monospace; color: var(--accent-primary);">#0e840c561d9c7dd6...</td>
+                </tr>
+                <tr>
+                    <td class="id-col">SC-01</td>
+                    <td>./trades.xml</td>
+                    <td>#WAITING_FOR_INPUT</td>
+                </tr>
+                <tr>
+                    <td class="id-col">SC-02</td>
+                    <td>./ticker_map.json</td>
+                    <td>#WAITING_FOR_INPUT</td>
+                </tr>
+            </tbody>
+        </table>
+    <div class="action-bar">
+                    <button class="btn btn-add">[+] Add Row</button>
+                    <button class="btn btn-edit">_Edit</button>
+                    <button class="btn btn-save">!Save</button>
+                    <button class="btn btn-dl">v Download</button>
+                </div></div>
+
+    <h2 class="collapsible-header" contenteditable="false">3. Requirements (The "What")</h2>
+    <div class="collapsible-content" contenteditable="false" style="display: block;">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Category</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Covered By</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="F-010"><td class="id-col">F-010</td><td><span class="badge req">Functional</span></td><td>Import Source</td><td>The system shall import trade data from CapTrader 'Activity Statements' provided in CSV format. The import process must support the 'Complex/Details' mode to ensure all necessary fields are available.</td><td><a href="#S-IO-010" class="trace-link">S-IO-010</a></td></tr>
+                <tr id="F-020"><td class="id-col">F-020</td><td><span class="badge req">Functional</span></td><td>Incremental Updates</td><td>The system must be idempotent; when running the import on the same file multiple times, it shall ignore duplicates and not create redundant entries in the output.</td><td><a href="#S-ALG-020" class="trace-link">S-ALG-020</a></td></tr>
+                <tr id="F-030"><td class="id-col">F-030</td><td><span class="badge req">Functional</span></td><td>Data Persistence</td><td>All extracted data must be centrally stored in a <code>trades.xml</code> file, which serves as the 'Single Source of Truth' for downstream analysis.</td><td><a href="#S-DAT-010" class="trace-link">S-DAT-010</a></td></tr>
+                <tr id="F-040"><td class="id-col">F-040</td><td><span class="badge req">Functional</span></td><td>Dividends</td><td>The system shall detect dividend payments within the CSV and store them in a dedicated <code>&lt;Dividends&gt;</code> section in the XML.</td><td><a href="#S-DAT-025" class="trace-link">S-DAT-025</a> <a href="#S-IO-030" class="trace-link">S-IO-030</a></td></tr>
+                <tr id="F-050"><td class="id-col">F-050</td><td><span class="badge req">Functional</span></td><td>Cash Flow</td><td>Transactions representing deposits or withdrawals must be identified and stored in a specific section to allow for transparent tracking of capital flows.</td><td><a href="#S-DAT-026" class="trace-link">S-DAT-026</a> <a href="#S-IO-035" class="trace-link">S-IO-035</a></td></tr>
+                <tr id="F-060"><td class="id-col">F-060</td><td><span class="badge req">Functional</span></td><td>Commission Extraction</td><td>All transaction fees (commissions) must be extracted from the CSV and stored as a separate <code>&lt;Commission&gt;</code> tag for each trade.</td><td><a href="#S-IO-020" class="trace-link">S-IO-020</a> <a href="#S-ALG-010" class="trace-link">S-ALG-010</a></td></tr>
+                <tr id="F-070"><td class="id-col">F-070</td><td><span class="badge req">Functional</span></td><td>Instrument Metadata</td><td>The system shall extract descriptive metadata for each traded instrument, specifically the full <strong>Name</strong> and a unique <strong>Identifier</strong> (ID, e.g., ISIN). This data is available in the 'Financial Instrument Information' section of the source CSV.</td><td><a href="#S-IO-040" class="trace-link">S-IO-040</a> <a href="#S-DAT-050" class="trace-link">S-DAT-050</a></td></tr>
+                <tr id="F-080"><td class="id-col">F-080</td><td><span class="badge req">Functional</span></td><td>File Archiving</td><td>After a CSV file has been successfully processed and its data has been added, the system must move the source file to an <code>oldcsv</code> directory to prevent re-processing.</td><td><a href="#S-IO-100" class="trace-link">S-IO-100</a></td></tr>
+                <tr id="F-290"><td class="id-col">F-290</td><td><span class="badge req">Functional</span></td><td>Ticker Mapping</td><td>The system must be able to normalize historical ticker symbols to their current equivalents (e.g., mapping '4GLD' to 'GLD') to ensure continuity in history.</td><td><a href="#S-ALG-215" class="trace-link">S-ALG-215</a></td></tr>
+
+                <tr id="D-010"><td class="id-col">D-010</td><td><span class="badge req">Data</span></td><td>Semantic XML</td><td>The output XML shall be logically grouped (e.g., Meta, Instrument, Execution) to maximize human readability and machine parsing.</td><td><a href="#S-DAT-020" class="trace-link">S-DAT-020</a></td></tr>
+                <tr id="D-020"><td class="id-col">D-020</td><td><span class="badge req">Data</span></td><td>Data Completeness</td><td>All critical trade fields must be preserved, including Symbol, Date, Quantity, Price, Fees, and Proceeds.</td><td><a href="#S-DAT-020" class="trace-link">S-DAT-020</a> <a href="#S-IO-020" class="trace-link">S-IO-020</a></td></tr>
+                <tr id="D-030"><td class="id-col">D-030</td><td><span class="badge req">Data</span></td><td>Numeric Format</td><td>Numeric values in the XML output must use German notation (comma as the decimal separator) to align with downstream Excel/local tools.</td><td><a href="#S-DAT-030" class="trace-link">S-DAT-030</a></td></tr>
+                <tr id="D-040"><td class="id-col">D-040</td><td><span class="badge req">Data</span></td><td>Date Format</td><td>Dates shall be formatted as DD.MM.YYYY. The time of execution must be stored separately in HH:MM:SS format.</td><td><a href="#S-DAT-040" class="trace-link">S-DAT-040</a></td></tr>
+                <tr id="D-050"><td class="id-col">D-050</td><td><span class="badge req">Data</span></td><td>Identification</td><td>The system must generate deterministic IDs (hashes) for every transaction to allow for reliable deduplication and referencing.</td><td><a href="#S-ALG-010" class="trace-link">S-ALG-010</a> <a href="#S-ALG-015" class="trace-link">S-ALG-015</a></td></tr>
+                <tr id="D-060"><td class="id-col">D-060</td><td><span class="badge req">Data</span></td><td>Currency</td><td>Original currencies must be preserved; no currency conversion should be performed during the import.</td><td><a href="#S-IO-020" class="trace-link">S-IO-020</a></td></tr>
+                <tr id="D-230"><td class="id-col">D-230</td><td><span class="badge req">Data</span></td><td>Input Map</td><td>Optionally, the system shall read a <code>ticker_map.json</code> file to retrieve renaming rules for tickers.</td><td><a href="#S-IO-220" class="trace-link">S-IO-220</a></td></tr>
+
+                <tr id="UI-010"><td class="id-col">UI-010</td><td><span class="badge req">Interface</span></td><td>CLI &amp; Auto-Discovery</td><td>The tool shall operate as a Command Line Interface (CLI). It should accept a file path as an argument or automatically discover the most recent CSV file in the working directory.</td><td><a href="#S-UI-010" class="trace-link">S-UI-010</a> <a href="#S-IO-005" class="trace-link">S-IO-005</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header" contenteditable="false">4. Specifications (The "How")</h2>
+    <div class="collapsible-content" style="display: block;" contenteditable="false">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Module</th>
+                    <th>Title</th>
+                    <th>Technical Implementation</th>
+                    <th>Traces To</th>
+                    <th>Covered By</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="S-UI-010"><td class="id-col">S-UI-010</td><td><span class="badge spec">Interface</span></td><td>CLI Arguments</td><td>The script checks <code>sys.argv</code>. If an argument is provided, it is treated as the target filename.</td><td><a href="#UI-010" class="trace-link">UI-010</a></td><td><a href="#TC-010" class="trace-link">TC-010</a></td></tr>
+                <tr id="S-UI-020"><td class="id-col"><br></td><td></td><td></td><td></td><td></td><td></td></tr>
+                
+                <tr id="S-IO-005"><td class="id-col">S-IO-005</td><td><span class="badge spec">I/O</span></td><td>Auto-Discovery</td><td>If no argument is provided, the script scans the directory for <code>*.csv</code> files and selects the one with the most recent modification time.</td><td><a href="#UI-010" class="trace-link">UI-010</a></td><td><a href="#TC-015" class="trace-link">TC-015</a></td></tr>
+                <tr id="S-IO-010"><td class="id-col">S-IO-010</td><td><span class="badge spec">I/O</span></td><td>Section Parsing</td><td>The parser iterates through the CSV rows, detecting section headers (e.g., 'Trades', 'Dividends') to switch its parsing logic contextually.</td><td><a href="#F-010" class="trace-link">F-010</a></td><td><a href="#TC-010" class="trace-link">TC-010</a></td></tr>
+                
+                <tr id="S-IO-040"><td class="id-col">S-IO-040</td><td><span class="badge spec">I/O</span></td><td>Metadata Parsing</td><td>The parser shall identify the section header 'Informationen zum Finanzinstrument'. It will iterate through this section to build a dictionary mapping the 'Symbol' to its 'Beschreibung' (Name) and 'Wertpapier-ID' (ISIN/ID).</td><td><a href="#F-070" class="trace-link">F-070</a></td><td><a href="#TC-095" class="trace-link">TC-095</a></td></tr>
+
+                <tr id="S-IO-020"><td class="id-col">S-IO-020</td><td><span class="badge spec">I/O</span></td><td>Trade Mapping</td><td>Specific columns are mapped to object fields. 'Quantity' &gt; 0 denotes a Buy. Commission columns are aggregated.</td><td><a href="#D-020" class="trace-link">D-020</a> <a href="#F-060" class="trace-link">F-060</a></td><td><a href="#TC-050" class="trace-link">TC-050</a> <a href="#TC-090" class="trace-link">TC-090</a></td></tr>
+                <tr id="S-IO-030"><td class="id-col">S-IO-030</td><td><span class="badge spec">I/O</span></td><td>Dividend Mapping</td><td>Parses the Dividend section, extracting amount, currency, and date.</td><td><a href="#F-040" class="trace-link">F-040</a></td><td><a href="#TC-060" class="trace-link">TC-060</a></td></tr>
+                <tr id="S-IO-035"><td class="id-col">S-IO-035</td><td><span class="badge spec">I/O</span></td><td>Deposit Mapping</td><td>Parses the 'Deposits &amp; Withdrawals' section for cash flow entries.</td><td><a href="#F-050" class="trace-link">F-050</a></td><td><a href="#TC-065" class="trace-link">TC-065</a></td></tr>
+                <tr id="S-IO-100"><td class="id-col">S-IO-100</td><td><span class="badge spec">I/O</span></td><td>Archive Processed File</td><td>Upon successful processing (if new data was written), the script moves the source CSV file into the <code>./oldcsv/</code> directory using <code>os.rename</code>.</td><td><a href="#F-080" class="trace-link">F-080</a></td><td><a href="#TC-110" class="trace-link">TC-110</a></td></tr>
+                <tr id="S-IO-220"><td class="id-col">S-IO-220</td><td><span class="badge spec">I/O</span></td><td>Load Map</td><td>On startup, the system checks for <code>ticker_map.json</code>. If found, it loads it into a dictionary <code>mapping = {"OLD": "NEW"}</code>.</td><td><a href="#D-230" class="trace-link">D-230</a></td><td><a href="#TC-080" class="trace-link">TC-080</a></td></tr>
+
+                <tr id="S-DAT-010"><td class="id-col">S-DAT-010</td><td><span class="badge spec">Struct</span></td><td>XML Root</td><td>The root element <code>&lt;TradeLog&gt;</code> shall contain children <code>&lt;Trades&gt;</code> and <code>&lt;Dividends&gt;</code>.</td><td><a href="#F-030" class="trace-link">F-030</a></td><td><a href="#TC-010" class="trace-link">TC-010</a></td></tr>
+                <tr id="S-DAT-020"><td class="id-col">S-DAT-020</td><td><span class="badge spec">Struct</span></td><td>Trade Element</td><td>Trades are stored as <code>&lt;Trade id="..."&gt;</code> with sub-elements for details.</td><td><a href="#D-010" class="trace-link">D-010</a></td><td><a href="#TC-010" class="trace-link">TC-010</a></td></tr>
+                <tr id="S-DAT-025"><td class="id-col">S-DAT-025</td><td><span class="badge spec">Struct</span></td><td>Div Element</td><td>Dividends are stored as <code>&lt;Dividend id="..."&gt;</code>.</td><td><a href="#F-040" class="trace-link">F-040</a></td><td><a href="#TC-060" class="trace-link">TC-060</a></td></tr>
+                <tr id="S-DAT-026"><td class="id-col">S-DAT-026</td><td><span class="badge spec">Struct</span></td><td>Dep Element</td><td>Cash flows are stored as <code>&lt;Transaction id="..."&gt;</code>.</td><td><a href="#F-050" class="trace-link">F-050</a></td><td><a href="#TC-065" class="trace-link">TC-065</a></td></tr>
+                
+                <tr id="S-DAT-050"><td class="id-col">S-DAT-050</td><td><span class="badge spec">Struct</span></td><td>XML Enrichment</td><td>During the generation of the <code>&lt;Trade&gt;</code> element, the system looks up the metadata using the symbol. It injects the attributes <code>name="..."</code> and <code>id="..."</code> into the tag.</td><td><a href="#F-070" class="trace-link">F-070</a></td><td><a href="#TC-095" class="trace-link">TC-095</a></td></tr>
+
+                <tr id="S-DAT-030"><td class="id-col">S-DAT-030</td><td><span class="badge spec">Logic</span></td><td>Num Format</td><td>Python floats are converted to strings, replacing periods with commas.</td><td><a href="#D-030" class="trace-link">D-030</a></td><td><a href="#TC-030" class="trace-link">TC-030</a></td></tr>
+                <tr id="S-DAT-040"><td class="id-col">S-DAT-040</td><td><span class="badge spec">Logic</span></td><td>Date Format</td><td>Timestamps are split into <code>&lt;Date&gt;</code> (DD.MM.YYYY) and <code>&lt;Time&gt;</code> (HH:MM:SS) tags.</td><td><a href="#D-040" class="trace-link">D-040</a></td><td><a href="#TC-040" class="trace-link">TC-040</a></td></tr>
+                <tr id="S-ALG-010"><td class="id-col">S-ALG-010</td><td><span class="badge spec">Algo</span></td><td>ID-Hash Trade</td><td>The Trade ID is generated via MD5 hash of (Date + Symbol + Qty + Gross + Commission).</td><td><a href="#D-050" class="trace-link">D-050</a></td><td><a href="#TC-020" class="trace-link">TC-020</a></td></tr>
+                <tr id="S-ALG-015"><td class="id-col">S-ALG-015</td><td><span class="badge spec">Algo</span></td><td>ID-Hash Div</td><td>The Dividend ID is generated via MD5 hash of (Date + Symbol + Amount + Description).</td><td><a href="#D-050" class="trace-link">D-050</a></td><td><a href="#TC-060" class="trace-link">TC-060</a></td></tr>
+                <tr id="S-ALG-020"><td class="id-col">S-ALG-020</td><td><span class="badge spec">Algo</span></td><td>Deduplication</td><td>New items are checked against a set of existing IDs to prevent duplicates.</td><td><a href="#F-020" class="trace-link">F-020</a></td><td><a href="#TC-020" class="trace-link">TC-020</a></td></tr>
+                <tr id="S-ALG-215"><td class="id-col">S-ALG-215</td><td><span class="badge spec">Algo</span></td><td>Normalization</td><td>Before processing, the Symbol is checked against the mapping dictionary. If a match is found, it is replaced by the new value.</td><td><a href="#F-290" class="trace-link">F-290</a></td><td><a href="#TC-070" class="trace-link">TC-070</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">6. Change History</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Version</th>
+                    <th>Author</th>
+                    <th>Description of Changes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2026-01-25</td>
+                    <td>3.3</td>
+                    <td>User/AI</td>
+                    <td>
+                        <strong>UI:</strong> Added Mobile Responsiveness (touch side-scrolling for tables).<br>
+                        <strong>Artifacts:</strong> Added <code>UI-020</code>, <code>S-UI-020</code>, <code>TC-100</code>.
+                    </td>
+                </tr>
+                <tr>
+                    <td>2026-01-25</td>
+                    <td>3.2</td>
+                    <td>User/AI</td>
+                    <td>
+                        <strong>Localization:</strong> Translated all artifacts to US English.<br>
+                        <strong>Refinement:</strong> Expanded descriptions to prose.<br>
+                        <strong>Feature:</strong> Added Metadata Extraction (Name, ID) from the Financial Instrument section. Added <code>F-070</code>, <code>S-IO-040</code>, <code>S-DAT-050</code>.
+                    </td>
+                </tr>
+                <tr>
+                    <td>2026-01-25</td>
+                    <td>3.1</td>
+                    <td>User/AI</td>
+                    <td>
+                        <strong>Migration:</strong> Porting requirements from Polarion PnL Tracker 3.0 to microALM format.<br>
+                        <strong>Refinement:</strong> Linking Trace-Links (Req-Spec-Test).
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    <div class="action-bar">
+                    <button class="btn btn-add">[+] Add Row</button>
+                    <button class="btn btn-edit">_Edit</button>
+                    <button class="btn btn-save">!Save</button>
+                    <button class="btn btn-dl">v Download</button>
+                </div></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // --- 0. AUTO-HASH (INTEGRITY) ---
+            async function calculateSelfHash() {
+                const hashCell = document.getElementById("self-hash");
+                if(!hashCell) return;
+
+                // 1. Snapshot the HTML
+                let content = document.documentElement.outerHTML;
+
+                // 2. Normalize the Hash Cell (Remove previous hash to avoid infinite loop)
+                // We assume the cell looks like <td id="self-hash"...>...</td>
+                // We replace the CONTENT of that cell with empty string for calculation
+                const cleanContent = content.replace(/(<td id="self-hash"[^>]*>)([\s\S]*?)(<\/td>)/, '$1HASH_PLACEHOLDER$3');
+
+                // 3. Calculate Hash using Web Crypto API
+                const msgBuffer = new TextEncoder().encode(cleanContent);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                
+                // 4. Convert to Hex
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                // 5. Display Short Hash
+                hashCell.textContent = "#" + hashHex.substring(0, 16) + "...";
+            }
+            
+            // Calc on Load
+            calculateSelfHash();
+
+            // --- 1. COLLAPSIBLE LOGIC ---
+            const headers = document.querySelectorAll(".collapsible-header");
+            headers.forEach(header => {
+                header.addEventListener("click", function(e) {
+                    if(this.isContentEditable) return; 
+                    this.classList.toggle("collapsed");
+                    const content = this.nextElementSibling;
+                    if (content.style.display === "block") {
+                        content.style.display = "none";
+                    } else {
+                        content.style.display = "block";
+                    }
+                });
+            });
+
+            // --- 2. TOOLBAR INJECTION ---
+            const contents = document.querySelectorAll(".collapsible-content");
+            contents.forEach(content => {
+                const toolbar = document.createElement("div");
+                toolbar.className = "action-bar";
+                toolbar.innerHTML = `
+                    <button class="btn btn-add">[+] Add Row</button>
+                    <button class="btn btn-edit">_Edit</button>
+                    <button class="btn btn-save">!Save</button>
+                    <button class="btn btn-dl">v Download</button>
+                `;
+                content.appendChild(toolbar);
+
+                const btnAdd = toolbar.querySelector(".btn-add");
+                const btnEdit = toolbar.querySelector(".btn-edit");
+                const btnSave = toolbar.querySelector(".btn-save");
+                const btnDl = toolbar.querySelector(".btn-dl");
+
+                // ADD
+                btnAdd.addEventListener("click", () => {
+                    const tableBody = content.querySelector("tbody");
+                    if (tableBody) {
+                        const lastRow = tableBody.lastElementChild;
+                        if(lastRow) {
+                            const newRow = lastRow.cloneNode(true);
+                            Array.from(newRow.cells).forEach(cell => {
+                                cell.innerHTML = "...";
+                                cell.removeAttribute("id");
+                            });
+                            newRow.removeAttribute("id");
+                            // Prevent cloning the SELF row if it was last
+                            if(newRow.querySelector("#self-hash")) {
+                                newRow.innerHTML = "<td>...</td><td>...</td><td>...</td>";
+                            }
+                            tableBody.appendChild(newRow);
+                        } else {
+                            const newRow = tableBody.insertRow();
+                            const colCount = content.previousElementSibling.textContent.includes("Sidecar") ? 3 : 5;
+                            let html = "";
+                            for(let i=0; i<colCount; i++) html += "<td>...</td>";
+                            newRow.innerHTML = html;
+                        }
+                    } else {
+                        const p = document.createElement("p");
+                        p.textContent = "New content buffer...";
+                        content.insertBefore(p, toolbar);
+                    }
+                });
+
+                // EDIT
+                btnEdit.addEventListener("click", () => {
+                    content.contentEditable = "true";
+                    const header = content.previousElementSibling;
+                    if(header) header.contentEditable = "true";
+                    
+                    // LOCK SELF ROW
+                    const selfRow = document.getElementById("self-hash")?.parentElement;
+                    if(selfRow) selfRow.contentEditable = "false";
+
+                    btnEdit.style.display = "none";
+                    btnSave.style.display = "inline-block";
+                });
+
+                // SAVE
+                btnSave.addEventListener("click", async () => {
+                    content.contentEditable = "false";
+                    const header = content.previousElementSibling;
+                    if(header) header.contentEditable = "false";
+                    
+                    // Re-Calc Hash before "saving" state visually
+                    await calculateSelfHash();
+
+                    btnSave.style.display = "none";
+                    btnEdit.style.display = "inline-block";
+                });
+
+                // DOWNLOAD
+                btnDl.addEventListener("click", async () => {
+                    // Update Hash right before download to be sure
+                    await calculateSelfHash();
+
+                    const htmlContent = document.documentElement.outerHTML;
+                    const blob = new Blob(['<!DOCTYPE html>\n' + htmlContent], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'microALM_csv_parser.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            });
+
+            // --- 3. SMART NAVIGATION ---
+            function handleHashNavigation() {
+                const hash = window.location.hash;
+                if (hash) {
+                    try {
+                        const target = document.querySelector(hash);
+                        if (target) {
+                            const parentContent = target.closest(".collapsible-content");
+                            if (parentContent) {
+                                parentContent.style.display = "block";
+                                const header = parentContent.previousElementSibling;
+                                if (header && header.classList.contains("collapsed")) {
+                                    header.classList.remove("collapsed");
+                                }
+                            }
+                            setTimeout(() => {
+                                target.scrollIntoView({ behavior: "smooth", block: "center" });
+                            }, 50);
+                        }
+                    } catch (e) { console.log("Nav Error", e); }
+                }
+            }
+            window.addEventListener("hashchange", handleHashNavigation);
+            setTimeout(handleHashNavigation, 100); 
+        });
+    </script>
+
+
+</body></html>

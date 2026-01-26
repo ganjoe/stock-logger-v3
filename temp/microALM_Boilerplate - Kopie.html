@@ -1,0 +1,670 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>microALM Boilerplate 1.10</title>
+    <style>
+        /* --- THEME VARIABLES (Dark/High Contrast) --- */
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --text-main: #c9d1d9;
+            --text-dim: #8b949e;
+            --accent-primary: #00ff41; 
+            --accent-secondary: #58a6ff; 
+            --border-color: #30363d;
+            --header-bg: #21262d;
+            --highlight-flash: #2ea043;
+        }
+
+        /* --- BASIC LAYOUT --- */
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-main);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+        }
+
+        h1 {
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- COLLAPSIBLE HEADERS --- */
+        .collapsible-header {
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .collapsible-header:hover {
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+        }
+
+        .collapsible-header::after {
+            content: '[ - ]';
+            font-size: 0.8em;
+            float: right;
+            margin-right: 10px;
+            color: var(--accent-secondary);
+        }
+
+        .collapsible-header.collapsed::after {
+            content: '[ + ]';
+            color: var(--text-dim);
+        }
+
+        .collapsible-content {
+            display: none;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border-left: 1px dashed var(--border-color);
+            padding-left: 15px;
+            /* --- MOBILE SCROLLING FIX --- */
+            overflow-x: auto; /* Allows horizontal scroll */
+            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+        }
+
+        h2.collapsible-header {
+            margin-top: 40px;
+            background-color: var(--header-bg);
+            color: #ffffff;
+            padding: 10px 15px;
+            border-left: 4px solid var(--accent-secondary);
+        }
+
+        h3.collapsible-header {
+            color: var(--text-main);
+            margin-top: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 5px;
+        }
+
+        p, li {
+            max-width: 900px;
+            color: var(--text-main);
+        }
+
+        code {
+            background-color: rgba(110, 118, 129, 0.4);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            color: var(--accent-secondary);
+        }
+
+        /* --- TABLE DESIGN --- */
+        table {
+            width: 100%;
+            /* Ensure table is wide enough to force scroll on small screens */
+            min-width: 800px; 
+            border-collapse: collapse;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        th {
+            background-color: #21262d;
+            color: var(--accent-primary);
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--accent-primary);
+            white-space: nowrap; /* Prevent headers from wrapping too aggressively */
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        tr:hover {
+            background-color: #30363d;
+        }
+
+        /* --- INTERACTIVITY & FLASH EFFECT --- */
+        tr[id] {
+            scroll-margin-top: 100px;
+        }
+
+        :target {
+            animation: flash-highlight 2s ease-out;
+            border: 1px solid var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        @keyframes flash-highlight {
+            0% { background-color: var(--highlight-flash); color: white; }
+            100% { background-color: transparent; }
+        }
+
+        /* --- EDITING MODE STYLES --- */
+        [contenteditable="true"] {
+            outline: 1px dashed var(--accent-secondary);
+            background-color: #0d1117;
+            padding: 5px;
+            color: #fff;
+        }
+
+        /* --- ACTION BAR --- */
+        .action-bar {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #161b22;
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            /* Stick action bar to left or allow wrap */
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 6px 15px;
+            border: 1px solid var(--border-color);
+            background-color: #21262d;
+            color: var(--text-main);
+            cursor: pointer;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+            background-color: #30363d;
+        }
+
+        .btn-add { border-color: #238636; color: #238636; }
+        .btn-add:hover { background-color: #238636; color: white; }
+
+        .btn-edit { border-color: #d29922; color: #d29922; }
+        .btn-edit:hover { background-color: #d29922; color: white; }
+
+        .btn-save { background-color: var(--accent-secondary); color: #000; border-color: var(--accent-secondary); display: none; font-weight: bold;}
+        .btn-save:hover { background-color: #79c0ff; }
+
+        /* --- BADGES & TRACE LINKS --- */
+        .id-col {
+            font-weight: 700;
+            color: var(--accent-secondary);
+            width: 120px;
+            min-width: 100px;
+        }
+
+        .badge { 
+            display: inline-block; padding: 2px 6px; border-radius: 4px; 
+            font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid;
+        }
+        .req { border-color: #1f6feb; color: #58a6ff; }
+        .spec { border-color: #8957e5; color: #d2a8ff; }
+        .test { border-color: #238636; color: #3fb950; }
+        .edit { border-color: #d29922; color: #d29922; }
+        .des  { border-color: #f778ba; color: #f778ba; }
+
+        .trace-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--accent-primary);
+            transition: all 0.2s;
+        }
+        .trace-link:hover {
+            background-color: var(--accent-primary);
+            color: #000;
+        }
+        
+        /* --- MOBILE TWEAKS --- */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.4rem; }
+            /* On mobile, headers should be clearly touchable */
+            .collapsible-header { padding: 15px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1 contenteditable="false">microALM Boilerplate 1.10</h1>
+    <p contenteditable="false">
+        Status: <strong>TEMPLATE</strong> | Version: <strong>1.10 (UIDD Hash)</strong> <br>
+        Focus: <strong>Mobile Ready, Copyable Hashes, Global CSV</strong>
+    </p>
+
+    <h3 class="collapsible-header">1. Philosophy & Usage</h3>
+    <div class="collapsible-content" style="display: block;">
+        <p>
+            Welcome to <strong>microALM</strong>. This is a single-file Application Lifecycle Management (ALM) solution.
+        </p>
+        <ul>
+            <li><strong>Self-Contained:</strong> Requirements, Specs, and Tests in one HTML file.</li>
+            <li><strong>Traceable:</strong> Clickable links between items (Req &harr; Spec &harr; Test).</li>
+            <li><strong>Editable:</strong> Edit content directly in the browser and save the file.</li>
+            <li><strong>Integrity-Aware:</strong> Calculates its own hash (UIDD) for version verification.</li>
+            <li><strong>Offline-First:</strong> Export/Import CSV logic embedded for Excel integration.</li>
+        </ul>
+    </div>
+
+    <h2 class="collapsible-header collapsed">2. Sidecar Definition</h2>
+    <div class="collapsible-content">
+        <p>Define external artifacts (Sidecars) related to this ALM document.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Link (URI/Path)</th>
+                    <th>#Hash (Integrity UIDD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background-color: #21262d;">
+                    <td class="id-col">SELF</td>
+                    <td>./microALM_Boilerplate.html</td>
+                    <td id="self-hash" style="font-family: monospace; color: var(--accent-primary); user-select: all;">CALCULATING...</td>
+                </tr>
+                <tr>
+                    <td class="id-col">SC-01</td>
+                    <td>./source_code.py</td>
+                    <td>#WAITING_FOR_INPUT</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">3. Requirements (The "What")</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Category</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Covered By</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="REQ-001"><td class="id-col">REQ-001</td><td><span class="badge req">Functional</span></td><td>Example Requirement</td><td>The system shall perform X when Y happens.</td><td><a href="#SPEC-001" class="trace-link">SPEC-001</a></td></tr>
+                <tr id="REQ-MOB-01"><td class="id-col">REQ-MOB-01</td><td><span class="badge req">Interface</span></td><td>Mobile Responsiveness</td><td>The documentation must be accessible on mobile devices. Data tables must support <strong>horizontal touch scrolling</strong>.</td><td><a href="#SPEC-MOB-01" class="trace-link">SPEC-MOB-01</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">4. Specifications (The "How")</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Module</th>
+                    <th>Title</th>
+                    <th>Technical Implementation</th>
+                    <th>Traces To</th>
+                    <th>Covered By</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="SPEC-001"><td class="id-col">SPEC-001</td><td><span class="badge spec">Core</span></td><td>Implementation Details</td><td>Use Algorithm Z to achieve Requirement X.</td><td><a href="#REQ-001" class="trace-link">REQ-001</a></td><td><a href="#TEST-001" class="trace-link">TEST-001</a></td></tr>
+                <tr id="SPEC-MOB-01"><td class="id-col">SPEC-MOB-01</td><td><span class="badge spec">UI/CSS</span></td><td>CSS Overflow</td><td>Apply <code>overflow-x: auto</code> and <code>min-width</code> to tables.</td><td><a href="#REQ-MOB-01" class="trace-link">REQ-MOB-01</a></td><td><a href="#TEST-MOB-01" class="trace-link">TEST-MOB-01</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">5. Test Cases (Verification)</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Procedure & Expectation</th>
+                    <th>Traces To</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="TEST-001"><td class="id-col">TEST-001</td><td><span class="badge test">Unit Test</span></td><td>Run function Z with Input A. Expect Output B.</td><td><a href="#SPEC-001" class="trace-link">SPEC-001</a></td></tr>
+                <tr id="TEST-MOB-01"><td class="id-col">TEST-MOB-01</td><td><span class="badge test">Mobile UI</span></td><td>Open file on smartphone. Swipe table left/right. Expect smooth scrolling.</td><td><a href="#SPEC-MOB-01" class="trace-link">SPEC-MOB-01</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">6. Change History</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Version</th>
+                    <th>Author</th>
+                    <th>Description of Changes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2025-01-25</td>
+                    <td>1.10</td>
+                    <td>System</td>
+                    <td>Added Global CSV Import/Export with Smart Formatting.</td>
+                </tr>
+                <tr>
+                    <td>2025-01-25</td>
+                    <td>1.9</td>
+                    <td>System</td>
+                    <td>Added Mobile Responsiveness.</td>
+                </tr>
+                <tr>
+                    <td>2025-01-01</td>
+                    <td>1.0</td>
+                    <td>Author</td>
+                    <td>Initial Boilerplate Creation.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // --- 0. AUTO-HASH (INTEGRITY UIDD) ---
+            async function calculateSelfHash() {
+                const hashCell = document.getElementById("self-hash");
+                if(!hashCell) return;
+                
+                let content = document.documentElement.outerHTML;
+                // Normalize for consistent hashing
+                const cleanContent = content.replace(/(<td id="self-hash"[^>]*>)([\s\S]*?)(<\/td>)/, "$1HASH_PLACEHOLDER$3");
+
+                const msgBuffer = new TextEncoder().encode(cleanContent);
+                const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+                hashCell.textContent = "#" + hashHex.substring(0, 20);
+                hashCell.title = "Full SHA-256: " + hashHex; 
+            }
+            calculateSelfHash();
+
+            // --- 1. GLOBAL ACTION BAR ---
+            const firstSection = document.querySelector("h3.collapsible-header");
+            if(firstSection) {
+                const globalToolbar = document.createElement("div");
+                globalToolbar.className = "action-bar";
+                globalToolbar.style.marginBottom = "20px";
+                globalToolbar.style.borderLeft = "4px solid var(--accent-primary)";
+                globalToolbar.innerHTML = `
+                    <strong style="margin-right:15px; color:var(--accent-primary);">ALL WORK ITEMS:</strong>
+                    <button class="btn btn-exp-all">^ Export All CSV</button>
+                    <button class="btn btn-imp-all">v Import All CSV</button>
+                    <input type="file" accept=".csv" id="global-csv-input" style="display:none">
+                `;
+                firstSection.parentNode.insertBefore(globalToolbar, firstSection);
+
+                // --- GLOBAL EXPORT ---
+                globalToolbar.querySelector(".btn-exp-all").addEventListener("click", () => {
+                    const sections = document.querySelectorAll(".collapsible-content");
+                    let csvRows = [];
+                    // Header
+                    csvRows.push("Section_Source,Item_ID,Category_Type,Title_Name,Description_Content,Trace_Relations,Extra_Data");
+
+                    sections.forEach((section) => {
+                        const header = section.previousElementSibling;
+                        if(!header) return;
+                        
+                        // Section ID generieren (z.B. "3_Requirements")
+                        const sectionName = header.textContent.trim().replace(/[^a-zA-Z0-9]/g, "_");
+                        
+                        const table = section.querySelector("table");
+                        if(table) {
+                            const rows = Array.from(table.querySelectorAll("tbody tr"));
+                            rows.forEach(row => {
+                                const cols = Array.from(row.querySelectorAll("td"));
+                                let rowData = [`"${sectionName}"`]; 
+                                cols.forEach(col => {
+                                    let text = col.innerText.replace(/"/g, '""'); 
+                                    rowData.push(`"${text}"`);
+                                });
+                                csvRows.push(rowData.join(","));
+                            });
+                        }
+                    });
+
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    downloadCSV(csvRows.join("\n"), `microALM_Export_${dateStr}.csv`);
+                });
+
+                // --- GLOBAL IMPORT ---
+                const fileInput = document.getElementById("global-csv-input");
+                globalToolbar.querySelector(".btn-imp-all").addEventListener("click", () => fileInput.click());
+
+                fileInput.addEventListener("change", (e) => {
+                    const file = e.target.files[0];
+                    if(!file) return;
+                    
+                    if(!confirm("ACHTUNG: Import überschreibt vorhandene Tabellen. Fortfahren?")) return;
+
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const text = event.target.result;
+                        processGlobalImport(text);
+                        calculateSelfHash(); 
+                    };
+                    reader.readAsText(file);
+                    e.target.value = ""; 
+                });
+            }
+
+            function downloadCSV(content, filename) {
+                const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+
+            // --- SMART IMPORT PROCESSOR ---
+            function processGlobalImport(csvText) {
+                const lines = csvText.split(/\r?\n/);
+                
+                // Map Section-Strings to TBODY elements
+                const sectionMap = {};
+                document.querySelectorAll(".collapsible-header").forEach(header => {
+                    const cleanName = header.textContent.trim().replace(/[^a-zA-Z0-9]/g, "_");
+                    const contentDiv = header.nextElementSibling;
+                    const tbody = contentDiv.querySelector("tbody");
+                    if(tbody) {
+                        sectionMap[cleanName] = tbody;
+                        tbody.innerHTML = ""; // Clear existing
+                    }
+                });
+
+                lines.forEach((line, idx) => {
+                    if(!line.trim() || idx === 0) return; // Skip Header
+
+                    // CSV Split (Regex handles quotes)
+                    const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                    if(matches.length < 2) return;
+
+                    let sectionKey = matches[0].replace(/^"|"$/g, "");
+                    const targetBody = sectionMap[sectionKey];
+                    
+                    if(targetBody) {
+                        const newRow = document.createElement("tr");
+                        
+                        // Matches[1] is ID, Matches[2] is Category, etc.
+                        // We loop through data columns (skip section column 0)
+                        for(let i=1; i<matches.length; i++) {
+                            const td = document.createElement("td");
+                            let cleanText = matches[i].replace(/^"|"$/g, "").replace(/""/g, '"').trim();
+                            
+                            // --- INTELLIGENT FORMATTING ---
+                            
+                            // 1. ID Column (Index 1) -> Bold/ID
+                            if(i === 1) {
+                                td.className = "id-col";
+                                // Set ID attribute for anchor targets
+                                newRow.id = cleanText; 
+                                td.innerText = cleanText;
+                            }
+                            // 2. Category Column (Index 2) -> Badges
+                            else if(i === 2) {
+                                // Determine Badge Type based on Section Name
+                                let badgeClass = "";
+                                if(sectionKey.includes("Requirement")) badgeClass = "badge req";
+                                else if(sectionKey.includes("Spec")) badgeClass = "badge spec";
+                                else if(sectionKey.includes("Test")) badgeClass = "badge test";
+                                
+                                if(badgeClass) {
+                                    td.innerHTML = `<span class="${badgeClass}">${cleanText}</span>`;
+                                } else {
+                                    td.innerText = cleanText;
+                                }
+                            }
+                            // 3. Trace/Text Columns -> Auto-Linkify
+                            else {
+                                // Regex finds strings like REQ-123 or SPEC-MOB-01 and links them
+                                // Avoid linking own ID if mentioned (optional)
+                                if (cleanText.match(/(REQ|SPEC|TEST|SC)-[\w-]+/)) {
+                                    const linkedText = cleanText.replace(/((REQ|SPEC|TEST|SC)-[\w-]+)/g, '<a href="#$1" class="trace-link">$1</a>');
+                                    td.innerHTML = linkedText;
+                                } else {
+                                    td.innerText = cleanText;
+                                }
+                            }
+                            newRow.appendChild(td);
+                        }
+                        targetBody.appendChild(newRow);
+                    }
+                });
+            }
+
+            // --- 2. COLLAPSIBLE LOGIC ---
+            const headers = document.querySelectorAll(".collapsible-header");
+            headers.forEach(header => {
+                header.addEventListener("click", function(e) {
+                    if(this.isContentEditable) return; 
+                    this.classList.toggle("collapsed");
+                    const content = this.nextElementSibling;
+                    content.style.display = (content.style.display === "block") ? "none" : "block";
+                });
+            });
+
+            // --- 3. SECTION TOOLBARS ---
+            const contents = document.querySelectorAll(".collapsible-content");
+            contents.forEach(content => {
+                const toolbar = document.createElement("div");
+                toolbar.className = "action-bar";
+                toolbar.innerHTML = `
+                    <button class="btn btn-add">[+] Add Row</button>
+                    <button class="btn btn-edit">_Edit</button>
+                    <button class="btn btn-save">!Save</button>
+                    <button class="btn btn-dl">v Download HTML</button>
+                `;
+                content.appendChild(toolbar);
+
+                const btnAdd = toolbar.querySelector(".btn-add");
+                const btnEdit = toolbar.querySelector(".btn-edit");
+                const btnSave = toolbar.querySelector(".btn-save");
+                const btnDl = toolbar.querySelector(".btn-dl");
+
+                // ADD
+                btnAdd.addEventListener("click", () => {
+                    const tableBody = content.querySelector("tbody");
+                    if (tableBody) {
+                        const lastRow = tableBody.lastElementChild;
+                        if(lastRow) {
+                            const newRow = lastRow.cloneNode(true);
+                            Array.from(newRow.cells).forEach(cell => {
+                                cell.innerHTML = "...";
+                                cell.removeAttribute("id");
+                            });
+                            newRow.removeAttribute("id");
+                            if(newRow.querySelector("#self-hash")) newRow.innerHTML = "<td>...</td><td>...</td><td>...</td>";
+                            tableBody.appendChild(newRow);
+                        } else {
+                            const newRow = tableBody.insertRow();
+                            const ths = content.querySelectorAll("th");
+                            ths.forEach(() => newRow.insertCell().innerHTML = "...");
+                        }
+                    }
+                });
+
+                // EDIT
+                btnEdit.addEventListener("click", () => {
+                    content.contentEditable = "true";
+                    const header = content.previousElementSibling;
+                    if(header) header.contentEditable = "true";
+                    const selfRow = document.getElementById("self-hash")?.parentElement;
+                    if(selfRow) selfRow.contentEditable = "false";
+                    btnEdit.style.display = "none";
+                    btnSave.style.display = "inline-block";
+                });
+
+                // SAVE
+                btnSave.addEventListener("click", async () => {
+                    content.contentEditable = "false";
+                    const header = content.previousElementSibling;
+                    if(header) header.contentEditable = "false";
+                    await calculateSelfHash();
+                    btnSave.style.display = "none";
+                    btnEdit.style.display = "inline-block";
+                });
+
+                // DOWNLOAD
+                btnDl.addEventListener("click", async () => {
+                    await calculateSelfHash();
+                    const htmlContent = document.documentElement.outerHTML;
+                    const blob = new Blob(["<!DOCTYPE html>\n" + htmlContent], { type: "text/html" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "microALM_Boilerplate.html";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            });
+
+            // --- 4. SMART NAVIGATION ---
+            function handleHashNavigation() {
+                const hash = window.location.hash;
+                if (hash) {
+                    try {
+                        const target = document.querySelector(hash);
+                        if (target) {
+                            const parentContent = target.closest(".collapsible-content");
+                            if (parentContent) {
+                                parentContent.style.display = "block";
+                                const header = parentContent.previousElementSibling;
+                                if (header && header.classList.contains("collapsed")) header.classList.remove("collapsed");
+                            }
+                            setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+                        }
+                    } catch (e) {}
+                }
+            }
+            window.addEventListener("hashchange", handleHashNavigation);
+            setTimeout(handleHashNavigation, 100); 
+        });
+    </script>
+
+</body>
+</html>

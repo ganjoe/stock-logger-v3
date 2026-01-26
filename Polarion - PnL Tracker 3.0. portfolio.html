@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PnL Tracker 2.0 - Module 2: Portfolio Generator</title>
+    <style>
+        /* --- BASIC LAYOUT --- */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f6f8;
+        }
+
+        h1 {
+            color: #d35400; /* Orange for Module 2 */
+            border-bottom: 3px solid #d35400;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        /* --- COLLAPSIBLE HEADERS --- */
+        .collapsible-header {
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .collapsible-header:hover {
+            filter: brightness(95%);
+        }
+
+        .collapsible-header::after {
+            content: '▼';
+            font-size: 0.8em;
+            float: right;
+            margin-right: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        /* State: Closed (Default) - Rotate arrow to point right */
+        .collapsible-header.collapsed::after {
+            transform: rotate(-90deg);
+        }
+
+        /* Content container - HIDDEN BY DEFAULT */
+        .collapsible-content {
+            display: none; /* Default state: closed */
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+        }
+
+        h2.collapsible-header {
+            margin-top: 50px;
+            background-color: #fff3e0;
+            color: #e65100;
+            padding: 12px 15px;
+            border-left: 6px solid #e65100;
+            border-radius: 0 4px 4px 0;
+            font-size: 1.2em;
+        }
+
+        h3.collapsible-header {
+            color: #5d4037;
+            margin-top: 30px;
+            border-bottom: 1px solid #d7ccc8;
+            padding: 10px 10px;
+            background-color: #efebe9;
+            border-left: 4px solid #8d6e63;
+        }
+
+        p, li {
+            max-width: 900px;
+            color: #444;
+        }
+
+        /* --- TABLE DESIGN --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 40px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        th {
+            background-color: #e67e22;
+            color: white;
+            text-align: left;
+            padding: 14px 12px;
+            font-weight: 600;
+            border-bottom: 2px solid #d35400;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eceff1;
+            vertical-align: top;
+        }
+
+        tr:hover {
+            background-color: #fbe9e7;
+        }
+
+        /* --- INTERACTIVITY & FLASH EFFECT --- */
+        tr[id] {
+            scroll-margin-top: 80px; /* Offset for sticky header if needed */
+        }
+
+        :target {
+            animation: flash-highlight 2.5s ease-out;
+            border-left: 4px solid #f9a825;
+            background-color: #fffde7;
+        }
+
+        @keyframes flash-highlight {
+            0% { background-color: #fff176; }
+            30% { background-color: #fff59d; }
+            100% { background-color: transparent; }
+        }
+
+        /* --- COLUMNS & BADGES --- */
+        .id-col {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-weight: 700;
+            color: #455a64;
+            width: 90px;
+            background-color: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .req { background-color: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
+        .spec { background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }
+        .test { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+
+        /* --- LINKS --- */
+        .trace-link {
+            display: inline-block;
+            background-color: #fff;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            text-decoration: none;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .trace-link:hover {
+            background-color: #ff9800;
+            color: white;
+            border-color: #f57c00;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>PnL Tracker 2.0 - Module 2: Portfolio Generator - Documentation</h1>
+    <p>
+        Status: <strong>FROZEN</strong> | Version: <strong>2.5</strong> <br>
+        Focus: <strong>Multi-Currency & Trader-View</strong>
+    </p>
+
+    <h3 class="collapsible-header collapsed">1. Project Philosophy & Design Decisions</h3>
+    <div class="collapsible-content">
+        <p>
+            This module has been specifically developed to meet the requirements of an <strong>active Swing and Breakout Trader</strong>. 
+            Unlike passive "Buy & Hold" investors who primarily look at the total value of their portfolio in their home currency, an active trader requires a differentiated perspective.
+        </p>
+
+        <h4>The Problem: Currency Noise vs. Trading Skill</h4>
+        <p>
+            A standard broker account displays the portfolio value in Euros (EUR). However, for evaluating a trading setup (e.g., "Breakout on Apple"), this is often misleading.
+            <br><em>Example:</em> A trade generates a 10% profit on the chart (USD), but simultaneously the Dollar drops by 10%. The broker displays a +/- 0% profit in Euros.
+            <br><em>Fallacy:</em> The trader might believe the setup was poor. In reality, the setup was excellent, but currency risk eroded the profit.
+        </p>
+
+        <h4>The Solution: The Two-Level Architecture</h4>
+        <p>
+            To solve this problem, this module strictly separates two perspectives:
+        </p>
+        <ul>
+            <li>
+                <strong>1. The Trader View (Micro-Level):</strong><br>
+                Represented by the <code>&lt;Position&gt;</code> data.<br>
+                <em>Principle:</em> All metrics (Price, PnL, Risk) remain in the <strong>Native Currency</strong> of the asset.<br>
+                <em>Goal:</em> To evaluate the quality of the trade. Did I score points in the market? A profit in USD is a validated trade, regardless of the exchange rate.
+            </li>
+            <li>
+                <strong>2. The Portfolio View (Macro-Level):</strong><br>
+                Represented by the <code>&lt;Summary&gt;</code> data.<br>
+                <em>Principle:</em> Here (and only here), everything is converted into the <strong>Base Currency (EUR)</strong>.<br>
+                <em>Goal:</em> To determine purchasing power and "wealth." A "Theoretical Cash" value is calculated here, which freezes realized profits at historical exchange rates to show what is theoretically available today.
+            </li>
+        </ul>
+    </div>
+
+    <h2 class="collapsible-header collapsed">2. Requirements</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Category</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="F-210"><td class="id-col">F-210</td><td><span class="badge req">Function</span></td><td>Period Snapshot</td><td>Calculation of the state as of the `End Date`. Optional: Performance data for the period [`Start`, `End`].</td></tr>
+                <tr id="F-220"><td class="id-col">F-220</td><td><span class="badge req">Function</span></td><td>Valuation Method</td><td>Valuation of positions follows the "Weighted Average Cost" method. Logic must correctly handle all scenarios: Opening, Accumulation (Averaging), Partial Sale, Closing, and "Flipping" a position.</td></tr>
+                <tr id="F-225"><td class="id-col">F-225</td><td><span class="badge req">Function</span></td><td>Fee Accounting</td><td>Transaction fees must be fully included in the calculation of the average price, invested capital, and realized PnL.</td></tr>
+                <tr id="F-230"><td class="id-col">F-230</td><td><span class="badge req">Function</span></td><td>Metrics (Holdings)</td><td>Calculation of Quantity, AvgEntryPrice, and InvestedCapital (as of `End Date`).</td></tr>
+                <tr id="F-240"><td class="id-col">F-240</td><td><span class="badge req">Function</span></td><td><strong>Obsolete</strong></td><td><em>A historically exact cash balance curve is not calculated (too complex). Replaced by the "Theoretical Cash" model in F-260.</em></td></tr>
+                <tr id="F-245"><td class="id-col">F-245</td><td><span class="badge req">Function</span></td><td>Period Data</td><td>If `Start Date` is set: Calculation of `RealizedPnL` and `Dividends` exclusively for the period.</td></tr>
+                <tr id="F-250"><td class="id-col">F-250</td><td><span class="badge req">Function</span></td><td>Long/Short</td><td>Sign Logic: Positive = Long, Negative = Short.</td></tr>
+                <tr id="F-260"><td class="id-col">F-260</td><td><span class="badge req">Function</span></td><td>Summary Data (EUR)</td><td><code>&lt;Summary&gt;</code> represents the <strong>aggregated Euro View</strong> (Macro-Level). It contains:<br>1. <strong>AssetValue:</strong> Sum of all positions in EUR.<br>2. <strong>Cash:</strong> Theoretical free capital in EUR.<br>3. <strong>TotalPortfolioValue:</strong> Total value (Asset + Cash).<br>4. <strong>Inflow:</strong> Sum of deposits.<br>5. Risk & Report Parameters.</td></tr>
+                <tr id="F-270"><td class="id-col">F-270</td><td><span class="badge req">Function</span></td><td>Position Data <strong>(Native)</strong></td><td><code>&lt;Position&gt;</code> represents the <strong>Trader View</strong> (Micro-Level). All values (Price, AvgEntry, TotalPnL, DailyPnL, Risk) are displayed in the <strong>Native Currency</strong> of the asset (e.g., USD, JPY, GBP) to represent the setup quality without distortion. The `Currency` attribute denotes the currency.</td></tr>
+                <tr id="F-280"><td class="id-col">F-280</td><td><span class="badge req">Function</span></td><td>Risk Cascade</td><td>Mechanism for TotalPortfolioRisk calculation: 1. StopLoss (Priority) -> 2. Volatility (IV) -> 3. Default (Total Loss).</td></tr>
+                <tr id="F-290"><td class="id-col">F-290</td><td><span class="badge req">Function</span></td><td>Market Data & Realtime</td><td>Usage of external market data (Module 3). Priority: 1. Realtime (only if Date="Today"), 2. Close (Historical).</td></tr>
+                <tr id="F-300"><td class="id-col">F-300</td><td><span class="badge req">Function</span></td><td><strong>Multi-Currency Aggregation</strong></td><td>Support for arbitrary currencies. For the Summary, the appropriate exchange rate (e.g., `USDEUR`, `GBPEUR`) is dynamically loaded.<br>1. PnLs are fixed in EUR at the <strong>Trade Date</strong>.<br>2. Open positions are valued in EUR at the <strong>Cut-off Date</strong>.</td></tr>
+                <tr id="D-210"><td class="id-col">D-210</td><td><span class="badge req">Data</span></td><td>Input</td><td>Reads `trades.xml`.</td></tr>
+                <tr id="D-220"><td class="id-col">D-220</td><td><span class="badge req">Data</span></td><td>Output</td><td>Writes to a single file, 'portfolio.xml' (Overwrite).</td></tr>
+                <tr id="UI-210"><td class="id-col">UI-210</td><td><span class="badge req">UI</span></td><td>CLI</td><td>Arguments: <code>--end</code> (Default=Today), <code>--start</code> (Default=First trade), <code>--input</code>.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">3. Specifications</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Module</th>
+                    <th>Title</th>
+                    <th>Technical Implementation</th>
+                    <th>Traceability</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="S-DAT-210"><td class="id-col">S-DAT-210</td><td><span class="badge spec">Struct</span></td><td>XML Root</td><td>Root: <code>&lt;Portfolio&gt;</code>. Children: <code>&lt;Summary&gt;</code>, <code>&lt;Positions&gt;</code>.</td><td><a href="#F-210" class="trace-link">F-210</a></td></tr>
+                <tr id="S-DAT-220"><td class="id-col">S-DAT-220</td><td><span class="badge spec">Struct</span></td><td>Position (Native)</td><td><code>&lt;Position&gt;</code> Fields: `Currency` (e.g., 'USD'), `Price` (in USD), `TotalPnL` (in USD), `DailyPnL` (in USD). <strong>No currency conversion in this node!</strong></td><td><a href="#F-270" class="trace-link">F-270</a></td></tr>
+                <tr id="S-DAT-230"><td class="id-col">S-DAT-230</td><td><span class="badge spec">Struct</span></td><td>Summary (EUR)</td><td>All fields in <code>&lt;Summary&gt;</code> (`AssetValue`, `Cash`, `TotalPortfolioValue`) are explicitly in <strong>EUR</strong>.</td><td><a href="#F-260" class="trace-link">F-260</a></td></tr>
+                <tr id="S-DAT-240"><td class="id-col">S-DAT-240</td><td><span class="badge spec">Struct</span></td><td>Market & FX Cache</td><td>1. Reads Asset Data: `data/market/{ISIN}.json`.<br>2. Reads/Fetches FX Data corresponding to asset currency (e.g., `USDEUR.json`).</td><td><a href="#F-290" class="trace-link">F-290</a> <a href="#F-300" class="trace-link">F-300</a></td></tr>
+                <tr id="S-ALG-210"><td class="id-col">S-ALG-210</td><td><span class="badge spec">Algo</span></td><td>Time Travel</td><td>Global execution chronologically until `End Date`. Split Flip-Trades.</td><td><a href="#F-230" class="trace-link">F-230</a></td></tr>
+                <tr id="S-ALG-235"><td class="id-col">S-ALG-235</td><td><span class="badge spec">Algo</span></td><td>Period PnL</td><td>`RealizedPnL` is calculated per trade (Native Currency).</td><td><a href="#F-245" class="trace-link">F-245</a></td></tr>
+                <tr id="S-ALG-220"><td class="id-col">S-ALG-220</td><td><span class="badge spec">Algo</span></td><td>Pos Update</td><td>`AvgEntryPrice` and `Invested` are maintained in Native Currency (Weighted Avg).</td><td><a href="#F-220" class="trace-link">F-220</a></td></tr>
+                <tr id="S-ALG-230"><td class="id-col">S-ALG-230</td><td><span class="badge spec">Algo</span></td><td><strong>Theoretical Cash (EUR)</strong></td><td>Calculation:<br>1. <strong>Inflow:</strong> Sum of all Deposits (EUR) - Withdrawals (EUR).<br>2. <strong>Accumulated PnL:</strong> Iterate over all *closed* trades. Convert `NativePnL` using `FX-Rate(TradeDate)` to EUR. Sum it up.<br>3. <strong>Invested Deduction:</strong> Subtract currently bound capital of *open* positions (converted at the historical cost-basis rate to remain consistent with Inflow).<br><em>Formula:</em> `Cash = Inflow + Sum(RealizedPnL_EUR) - Sum(OpenInvested_EUR_at_Cost)`.</td><td><a href="#F-260" class="trace-link">F-260</a> <a href="#F-300" class="trace-link">F-300</a></td></tr>
+                <tr id="S-ALG-265"><td class="id-col">S-ALG-265</td><td><span class="badge spec">Algo</span></td><td><strong>Total Value (EUR)</strong></td><td>`AssetValue` = Sum over all positions: `(Qty * NativePrice * FX_Rate_EndDate)`.<br>`TotalPortfolioValue` = `AssetValue` + `Cash`.</td><td><a href="#F-260" class="trace-link">F-260</a> <a href="#F-300" class="trace-link">F-300</a></td></tr>
+                <tr id="S-ALG-260"><td class="id-col">S-ALG-260</td><td><span class="badge spec">Algo</span></td><td>Daily PnL</td><td>Compare Native Market Value `End` vs `End-1`.</td><td><a href="#F-270" class="trace-link">F-270</a></td></tr>
+                <tr id="S-INT-210"><td class="id-col">S-INT-210</td><td><span class="badge spec">I/O</span></td><td>Fetcher Call</td><td>Trigger Module 3 for missing data (Build Batch List).</td><td><a href="#F-290" class="trace-link">F-290</a></td></tr>
+                <tr id="S-ALG-250"><td class="id-col">S-ALG-250</td><td><span class="badge spec">Algo</span></td><td>Risk Calc</td><td>Risk in Native Currency.</td><td><a href="#F-280" class="trace-link">F-280</a></td></tr>
+                <tr id="S-IO-210"><td class="id-col">S-IO-210</td><td><span class="badge spec">I/O</span></td><td>Args</td><td>`argparse` logic. Date validation.</td><td><a href="#UI-210" class="trace-link">UI-210</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">4. Test Specifications (Test Cases)</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Procedure & Expectation</th>
+                    <th>Traceability</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="TC-270"><td class="id-col">TC-270</td><td><span class="badge test">Native View</span></td><td>Buy US stock. Dollar drops significantly. Chart rises slightly.<br>Expectation: <code>&lt;Position&gt;</code> shows positive PnL (in USD), as the setup was good. Currency loss is invisible there.</td><td><a href="#F-270" class="trace-link">F-270</a></td></tr>
+                <tr id="TC-300"><td class="id-col">TC-300</td><td><span class="badge test">Multi-Currency</span></td><td>Portfolio: 1x USD Stock, 1x JPY Stock, 1x GBP Stock.<br>Expectation: Summary converts all 3 positions using respective FX rates into Euro and calculates the sum.</td><td><a href="#F-300" class="trace-link">F-300</a></td></tr>
+                <tr id="TC-310"><td class="id-col">TC-310</td><td><span class="badge test">Historical FX PnL</span></td><td>Trade in Jan (USD strong), Trade in Dec (USD weak).<br>Expectation: Profit from Jan is fixed in Cash using the high Jan rate.</td><td><a href="#S-ALG-230" class="trace-link">S-ALG-230</a></td></tr>
+                <tr id="TC-290"><td class="id-col">TC-290</td><td><span class="badge test">Realtime Trigger</span></td><td>Call with <code>--end=Today</code>.<br>Expectation: Script detects "Today", calls Module 3 for Live Quote. XML contains intraday price.</td><td><a href="#F-290" class="trace-link">F-290</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="collapsible-header collapsed">5. Change History</h2>
+    <div class="collapsible-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Version</th>
+                    <th>Author</th>
+                    <th>Description of Changes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2026-01-25</td>
+                    <td>2.5</td>
+                    <td>User</td>
+                    <td><strong>Concept Update:</strong> Definition of "Trader View" (Native Currency) vs. "Portfolio View" (EUR).<br><strong>F-270:</strong> Enforced Native Currency for position data.<br><strong>F-300:</strong> Defined Multi-Currency logic for Summary.</td>
+                </tr>
+                <tr>
+                    <td>2026-01-25</td>
+                    <td>2.4</td>
+                    <td>User</td>
+                    <td><strong>Cash Model:</strong> Marked F-240 (Historical Cash) as obsolete. Introduced "Theoretical Cash" model in F-260 and S-ALG-230.</td>
+                </tr>
+                <tr>
+                    <td>2026-01-25</td>
+                    <td>2.3</td>
+                    <td>User</td>
+                    <td><strong>Market Data Integration:</strong> Added F-290. Specified interface to Module 3 (Data Fetcher) via S-INT-210. Defined Realtime exception for "Today".</td>
+                </tr>
+                <tr>
+                    <td>2026-01-25</td>
+                    <td>2.2</td>
+                    <td>User</td>
+                    <td><strong>Extended Metrics:</strong> Expanded F-260 with Inflow and TotalMarketValue. Added Price, TotalPnL, and DailyPnL to F-270.</td>
+                </tr>
+                <tr>
+                    <td>2026-01-24</td>
+                    <td>2.0</td>
+                    <td>System</td>
+                    <td>Initial creation based on PnL Tracker 1.0 logic (Weighted Average Cost).</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // 1. Setup Click Handlers for Headers
+            const headers = document.querySelectorAll(".collapsible-header");
+            headers.forEach(header => {
+                header.addEventListener("click", function() {
+                    this.classList.toggle("collapsed");
+                    const content = this.nextElementSibling;
+                    
+                    // Toggle Logic: If it's block, hide it. Else, show it.
+                    if (content.style.display === "block") {
+                        content.style.display = "none";
+                    } else {
+                        content.style.display = "block";
+                    }
+                });
+            });
+
+            // 2. Logic to handle Links (Auto-Expand)
+            function handleHashNavigation() {
+                const hash = window.location.hash;
+                if (hash) {
+                    try {
+                        // Attempt to find the target element (e.g. <tr id="F-210">)
+                        const target = document.querySelector(hash);
+                        if (target) {
+                            // Find the parent content block
+                            const parentContent = target.closest(".collapsible-content");
+                            
+                            // If target is inside a collapsible block
+                            if (parentContent) {
+                                // Force open
+                                parentContent.style.display = "block";
+                                
+                                // Update the header icon (remove 'collapsed' class)
+                                const header = parentContent.previousElementSibling;
+                                if (header && header.classList.contains("collapsed")) {
+                                    header.classList.remove("collapsed");
+                                }
+                            }
+
+                            // Smooth scroll to target (needed if it was hidden before)
+                            setTimeout(() => {
+                                target.scrollIntoView({ behavior: "smooth", block: "center" });
+                            }, 50);
+                        }
+                    } catch (e) {
+                        // Ignore invalid hashes
+                        console.log("Navigation error:", e);
+                    }
+                }
+            }
+
+            // Listen for hash changes (clicking links)
+            window.addEventListener("hashchange", handleHashNavigation);
+            
+            // Handle initial load (if URL has hash)
+            handleHashNavigation();
+        });
+    </script>
+
+</body>
+</html>

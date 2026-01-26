@@ -1,0 +1,28 @@
+{
+  "_security_warning": "DO NOT COMMIT THIS FILE TO GIT! This file contains sensitive API credentials.",
+  "providers": {
+    "yahoo": {
+      "api_key": null,
+      "enabled": true,
+      "priority": 1,
+      "description": "Uses yfinance library. No API key required for standard usage."
+    },
+    "alpha_vantage": {
+      "api_key": "A1B2C3D4E5F6G7H8",
+      "enabled": true,
+      "priority": 2,
+      "rate_limit": "5 calls per minute (Free Tier)"
+    },
+    "twelve_data": {
+      "api_key": "td_1234567890abcdef1234567890abcdef",
+      "enabled": true,
+      "priority": 3,
+      "rate_limit": "800 calls per day"
+    }
+  },
+  "global_settings": {
+    "request_timeout_seconds": 10,
+    "max_retries": 3,
+    "cache_ttl_minutes_fx": 60
+  }
+}
