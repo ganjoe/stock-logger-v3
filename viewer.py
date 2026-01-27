@@ -28,12 +28,15 @@ def create_html_dashboard(xml_file, html_file):
         cash_balances_str = " | ".join(cash_balances) if cash_balances else "N/A"
 
         # --- Extract Period Metrics ---
-        realized_pnl = []
-        for pnl in root.findall("Summary/PeriodMetrics/RealizedPnL/PnL"):
-            currency = pnl.attrib.get('currency', '')
-            value = pnl.text
-            realized_pnl.append(f"{value} {currency}")
-        realized_pnl_str = " | ".join(realized_pnl) if realized_pnl else "0.0"
+        # [Update] RealizedPnL is now a single aggregated value in EUR
+        realized_pnl_node = root.find("Summary/PeriodMetrics/RealizedPnL")
+        realized_pnl_str = f"{realized_pnl_node.text} {realized_pnl_node.get('currency', 'EUR')}" if realized_pnl_node is not None else "0,00 EUR"
+
+        # [Update] Breakdown fields
+        realized_gains = root.findtext("Summary/PeriodMetrics/RealizedGains", "0,00")
+        realized_losses = root.findtext("Summary/PeriodMetrics/RealizedLosses", "0,00")
+        unrealized_gains = root.findtext("Summary/UnrealizedGains", "0,00")
+        unrealized_losses = root.findtext("Summary/UnrealizedLosses", "0,00")
 
         dividends = []
         for div in root.findall("Summary/PeriodMetrics/Dividends/Dividend"):
@@ -159,6 +162,16 @@ def create_html_dashboard(xml_file, html_file):
                 <div class="card">
                     <h3>Period Realized PnL</h3>
                     <p>{realized_pnl_str}</p>
+                </div>
+                <div class="card">
+                    <h3>Realized Gains / Losses</h3>
+                    <p style="color: #4caf50;">+{realized_gains}</p>
+                    <p style="color: #cf6679;">{realized_losses}</p>
+                </div>
+                <div class="card">
+                    <h3>Unrealized Gains / Losses</h3>
+                    <p style="color: #4caf50;">+{unrealized_gains}</p>
+                    <p style="color: #cf6679;">{unrealized_losses}</p>
                 </div>
                 <div class="card">
                     <h3>Period Dividends</h3>

@@ -6,7 +6,7 @@ F-230,Function,Metrics (Holdings),"Calculation of Quantity, AvgEntryPrice, and I
 F-240,Function,Obsolete,"A historically exact cash balance curve is not calculated (too complex). Replaced by the ""Theoretical Cash"" model in F-260.",
 F-245,Function,Period Data,"If ""Start Date"" is set: Calculation of ""RealizedPnL"" and ""Dividends"" exclusively for the period.",
 F-250,Function,Long/Short,"Sign Logic: Positive = Long, Negative = Short.",
-F-260,Function,Summary Data (EUR),"<Summary> represents the aggregated Euro View (Macro-Level). It contains: 1. AssetValue: Sum of all positions in EUR. 2. Cash: Theoretical free capital in EUR. 3. TotalPortfolioValue: Total value (Asset + Cash). 4. Inflow: Sum of deposits. 5. Risk & Report Parameters.",
+F-260,Function,Summary Data (EUR),"<Summary> represents the aggregated Euro View (Macro-Level). It contains: 1. AssetValue. 2. Cash. 3. TotalPortfolioValue. 4. Inflow. 5. PnL Breakdown: Realized Gains/Losses and Unrealized Gains/Losses (all in EUR). 6. Risk & Report Parameters.",
 F-270,Function,Position Data (Native),"<Position> represents the Trader View (Micro-Level). All values (Price, AvgEntry, TotalPnL, DailyPnL, Risk) are displayed in the Native Currency of the asset (e.g., USD, JPY, GBP) to represent the setup quality without distortion. The ""Currency"" attribute denotes the currency.",
 F-280,Function,Risk Cascade,"Mechanism for TotalPortfolioRisk calculation: 1. StopLoss (Priority) -> 2. Volatility (IV) -> 3. Default (Total Loss).",
 F-290,Function,Market Data & Realtime,"Usage of external market data (Module 3 data-fetcher.py). Priority: 1. Realtime (only if Date=""Today""), 2. Close (Historical).",
@@ -16,10 +16,10 @@ D-220,Data,Output,"Writes to a single file, ""portfolio.xml"" (Overwrite).",
 UI-210,UI,CLI,"Arguments: --end (Default=Today), --start (Default=First trade), --input.",
 S-DAT-210,Struct,XML Root,"Root: <Portfolio>. Children: <Summary>, <Positions>.",F-210
 S-DAT-220,Struct,Position (Native),"<Position> Fields: ""Currency"" (e.g., ""USD""), ""Price"" (in USD), ""TotalPnL"" (in USD), ""DailyPnL"" (in USD). No currency conversion in this node!",F-270
-S-DAT-230,Struct,Summary (EUR),"All fields in <Summary> (""AssetValue"", ""Cash"", ""TotalPortfolioValue"") are explicitly in EUR.",F-260
+S-DAT-230,Struct,Summary (EUR),"All fields in <Summary> are explicitly in EUR. Includes new tags: <RealizedGains>, <RealizedLosses>, <UnrealizedGains>, <UnrealizedLosses>.",F-260
 S-DAT-240,Struct,Market & FX Cache,"1. Reads Asset Data: ""data/market/{ISIN}.json"". 2. Reads/Fetches FX Data corresponding to asset currency (e.g., ""USDEUR.json"").","F-290, F-300"
 S-ALG-210,Algo,Time Travel,"Global execution chronologically until ""End Date"". Split Flip-Trades.",F-230
-S-ALG-235,Algo,Period PnL,"""RealizedPnL"" is calculated per trade (Native Currency).",F-245
+S-ALG-235,Algo,Period PnL,"""RealizedPnL"" is calculated per trade. Positive results sum to RealizedGains, negative to RealizedLosses.",F-245
 S-ALG-220,Algo,Pos Update,"""AvgEntryPrice"" and ""Invested"" are maintained in Native Currency (Weighted Avg).",F-220
 S-ALG-230,Algo,Theoretical Cash (EUR),"Calculation: 1. Inflow: Sum of all Deposits (EUR) - Withdrawals (EUR). 2. Accumulated PnL: Iterate over all *closed* trades. Convert ""NativePnL"" using ""FX-Rate(TradeDate)"" to EUR. Sum it up. 3. Invested Deduction: Subtract currently bound capital of *open* positions (converted at the historical cost-basis rate to remain consistent with Inflow). Formula: ""Cash = Inflow + Sum(RealizedPnL_EUR) - Sum(OpenInvested_EUR_at_Cost"".","F-260, F-300"
 S-ALG-265,Algo,Total Value (EUR),"""AssetValue"" = Sum over all positions: ""(Qty * NativePrice * FX_Rate_EndDate)"". ""TotalPortfolioValue"" = ""AssetValue"" + ""Cash"".","F-260, F-300"
@@ -32,3 +32,4 @@ TC-270,Native View,Buy US stock. Dollar drops significantly. Chart rises slightl
 TC-300,Multi-Currency,"Portfolio: 1x USD Stock, 1x JPY Stock, 1x GBP Stock.","Expectation: Summary converts all 3 positions using respective FX rates into Euro and calculates the sum.",F-300
 TC-310,Historical FX PnL,"Trade in Jan (USD strong), Trade in Dec (USD weak).","Expectation: Profit from Jan is fixed in Cash using the high Jan rate.",S-ALG-230
 TC-290,Realtime Trigger,"Call with --end=Today.","Expectation: Script detects ""Today"", calls Module 3 for Live Quote. XML contains intraday price.",F-290
+TC-225,Fee Accounting,"Short Sell 10 @ 100, Comm -2. Buy Cover 10 @ 90, Comm -2.","Expectation: Invested (Proceeds) = 998. Cost to Cover = 902. PnL = 998 - 902 = 96. (Without fees PnL would be 100).",F-225

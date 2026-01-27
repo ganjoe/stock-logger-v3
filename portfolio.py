@@ -92,6 +92,8 @@ class Portfolio:
         self.positions = {}  # symbol -> Position object
         self.cash_balance = {} # currency -> Decimal
         self.realized_pnl_eur = Decimal('0')
+        self.realized_gains_eur = Decimal('0')
+        self.realized_losses_eur = Decimal('0')
         self.dividends_eur = Decimal('0')
         self.inflow_eur = Decimal('0')
         self.market_data = market_data
@@ -123,7 +125,8 @@ class Portfolio:
         is_opening_trade = (position.quantity * trade_quantity) >= 0
 
         if is_opening_trade:
-            native_cost = (trade_quantity * trade_price) + commission
+            # [Fix] Commission is negative. Subtracting it adds to cost (Long) or reduces proceeds (Short).
+            native_cost = (trade_quantity * trade_price) - commission
             eur_cost = native_cost * fx_rate
             
             position.invested_capital += native_cost
@@ -138,24 +141,32 @@ class Portfolio:
             if trade_date >= start_date:
                 native_pnl = Decimal('0')
                 if trade_quantity < 0: # Selling a long position
-                    net_proceeds = (abs(trade_quantity) * trade_price) - commission
+                    # [Fix] Proceeds are reduced by commission (negative value adds to reduction)
+                    net_proceeds = (abs(trade_quantity) * trade_price) + commission
                     cost_basis_native = position.avg_entry_price * abs(trade_quantity)
                     native_pnl = net_proceeds - cost_basis_native
                 else: # Covering a short position
-                    cost_to_cover = (trade_quantity * trade_price) + commission
+                    # [Fix] Cost to cover is increased by commission (subtracting negative)
+                    cost_to_cover = (trade_quantity * trade_price) - commission
                     credit_from_short = position.avg_entry_price * trade_quantity
                     native_pnl = credit_from_short - cost_to_cover
                 
                 self.realized_pnl_eur += native_pnl * fx_rate
+                pnl_eur = native_pnl * fx_rate
+                self.realized_pnl_eur += pnl_eur
+                
+                if pnl_eur > 0:
+                    self.realized_gains_eur += pnl_eur
+                elif pnl_eur < 0:
+                    self.realized_losses_eur += pnl_eur
 
             # --- 2. Update Invested Capital ---
             # Reduce invested capital proportionally
-            if position.invested_capital != 0:
-                cost_basis_of_sold_shares = position.avg_entry_price * abs(trade_quantity)
-                proportion_sold = cost_basis_of_sold_shares / position.invested_capital
-                
+            if position.quantity != 0:
+                # [Fix] Use quantity ratio to handle signs correctly for both Long and Short
+                proportion_sold = abs(trade_quantity) / abs(position.quantity)
                 position.invested_capital_eur -= position.invested_capital_eur * proportion_sold
-                position.invested_capital -= cost_basis_of_sold_shares
+                position.invested_capital -= position.invested_capital * proportion_sold
 
             position.quantity += trade_quantity
 
@@ -281,6 +292,8 @@ def generate_xml_output(portfolio, start_date, end_date):
     # --- Pre-calculation and Aggregation ---
     total_asset_value_eur = Decimal('0')
     total_open_invested_eur = Decimal('0')
+    unrealized_gains_eur = Decimal('0')
+    unrealized_losses_eur = Decimal('0')
 
     # --- Positions Section ---
     positions_xml = ET.Element('Positions')
@@ -320,6 +333,12 @@ def generate_xml_output(portfolio, start_date, end_date):
             if fx_rate_end_date:
                 total_asset_value_eur += market_value_native * fx_rate_end_date
                 total_open_invested_eur += pos.invested_capital_eur # Sum for theoretical cash
+                
+                unrealized_pnl_eur = unrealized_pnl_native * fx_rate_end_date
+                if unrealized_pnl_eur > 0:
+                    unrealized_gains_eur += unrealized_pnl_eur
+                elif unrealized_pnl_eur < 0:
+                    unrealized_losses_eur += unrealized_pnl_eur
             else:
                  print(f"Warning: Could not find FX rate for {pos.currency}EUR on {end_date.strftime('%Y-%m-%d')}. Position {pos.symbol} not included in EUR summary.")
         else:
@@ -341,6 +360,10 @@ def generate_xml_output(portfolio, start_date, end_date):
     ET.SubElement(summary, 'CashValue').text = _to_german_str(theoretical_cash_eur) # Using Theoretical Cash
     ET.SubElement(summary, 'TotalPortfolioValue').text = _to_german_str(total_portfolio_value_eur)
     ET.SubElement(summary, 'Inflow').text = _to_german_str(portfolio.inflow_eur)
+    
+    # Unrealized Breakdown (Snapshot)
+    ET.SubElement(summary, 'UnrealizedGains').text = _to_german_str(unrealized_gains_eur)
+    ET.SubElement(summary, 'UnrealizedLosses').text = _to_german_str(unrealized_losses_eur)
 
 
     # --- Period Metrics Section ---
@@ -350,6 +373,14 @@ def generate_xml_output(portfolio, start_date, end_date):
     pnl_elem = ET.SubElement(period_metrics, 'RealizedPnL')
     pnl_elem.set('currency', 'EUR')
     pnl_elem.text = _to_german_str(portfolio.realized_pnl_eur)
+    
+    gains_elem = ET.SubElement(period_metrics, 'RealizedGains')
+    gains_elem.set('currency', 'EUR')
+    gains_elem.text = _to_german_str(portfolio.realized_gains_eur)
+
+    losses_elem = ET.SubElement(period_metrics, 'RealizedLosses')
+    losses_elem.set('currency', 'EUR')
+    losses_elem.text = _to_german_str(portfolio.realized_losses_eur)
 
     # Dividends (already in EUR)
     dividend_elem = ET.SubElement(period_metrics, 'Dividends')
