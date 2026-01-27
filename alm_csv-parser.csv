@@ -19,8 +19,8 @@ D-230,Data,Input Map,"Optionally, the system shall read a ticker_map.json file t
 UI-010,Interface,CLI & Auto-Discovery,"The tool shall operate as a Command Line Interface (CLI). It should accept a file path as an argument or automatically discover the most recent CSV file in the working directory.",,"S-UI-010; S-IO-005"
 S-UI-010,Interface (Spec),CLI Arguments,"The script checks sys.argv. If an argument is provided, it is treated as the target filename.",UI-010,TC-010
 S-IO-005,I/O (Spec),Auto-Discovery,"If no argument is provided, the script scans the directory for *.csv files and selects the one with the most recent modification time.",UI-010,TC-015
-S-IO-010,I/O (Spec),Section Parsing,"The parser iterates through the CSV rows, detecting section headers (e.g., 'Trades', 'Dividends') to switch its parsing logic contextually.",F-010,TC-010
-S-IO-040,I/O (Spec),Metadata Parsing,"The parser shall identify the section header 'Informationen zum Finanzinstrument'. It will iterate through this section to build a dictionary mapping the 'Symbol' to its 'Beschreibung' (Name) and 'Wertpapier-ID' (ISIN/ID).",F-070,TC-095
+S-IO-010,I/O (Spec),Two-Pass Parsing,"The parser processes the CSV in two passes. Pass 1 extracts metadata (Name, ISIN) from 'Informationen zum Finanzinstrument'. Pass 2 extracts transactions. This ensures metadata is available regardless of section order.",F-010,TC-010
+S-IO-040,I/O (Spec),Metadata Parsing,"The parser iterates the 'Informationen zum Finanzinstrument' section. It applies the Ticker Map to the symbol immediately, ensuring metadata (Name, ISIN) is stored under the mapped (target) ticker.",F-070,TC-095
 S-IO-020,I/O (Spec),Trade Mapping,"Specific columns are mapped to object fields. 'Quantity' > 0 denotes a Buy. Commission columns are aggregated.","D-020; F-060","TC-050; TC-090"
 S-IO-030,I/O (Spec),Dividend Mapping,"Parses the Dividend section, extracting amount, currency, and date.",F-040,TC-060
 S-IO-035,I/O (Spec),Deposit Mapping,"Parses the 'Deposits & Withdrawals' section for cash flow entries.",F-050,TC-065
@@ -37,7 +37,7 @@ S-DAT-040,Logic (Spec),Date Format,"Timestamps are.split into <Date> (DD.MM.YYYY
 S-ALG-010,Algo (Spec),ID-Hash Trade,"The Trade ID is generated via MD5 hash of (Date + Symbol + Qty + Gross + Commission).",D-050,TC-020
 S-ALG-015,Algo (Spec),ID-Hash Div,"The Dividend ID is generated via MD5 hash of (Date + Symbol + Amount + Description).",D-050,TC-060
 S-ALG-020,Algo (Spec),Deduplication,"New items are checked against a set of existing IDs to prevent duplicates.",F-020,TC-020
-S-ALG-215,Algo (Spec),Normalization,"Before processing, the Symbol is checked against the mapping dictionary. If a match is found, it is replaced by the new value.",F-290,TC-070
+S-ALG-215,Algo (Spec),Normalization,"Symbol normalization via the mapping dictionary is applied consistently during both Metadata extraction (Pass 1) and Transaction processing (Pass 2) to ensure trades are correctly linked to their ISINs.",F-290,TC-070
 TC-120,Test Case,Duplicate Tag Check,"Automated test: Parse the generated trades.xml and assert that no <Trade> element contains multiple child tags with the same name (e.g., count(<Commission>) must be <= 1).",S-DAT-060,
 TC-125,Test Case,Field Consistency Check,"Code Review / Static Analysis: Ensure that the exclusion list in `update_xml` contains the exact keys defined in the dictionary construction in `process_csv`.",D-070,
 TC-010,Test Case,CLI & File Load,"Execute script with a valid CSV argument. Assert that the script runs without error and the 'trades.xml' file is created or updated.",S-UI-010,

@@ -100,6 +100,11 @@ class Portfolio:
         """Retrieves or creates a position."""
         if symbol not in self.positions:
             self.positions[symbol] = Position(symbol, currency, isin)
+        
+        # [Fix] Update ISIN if it was missing in the initial creation but is present now
+        if not self.positions[symbol].isin and isin:
+            self.positions[symbol].isin = isin
+            
         return self.positions[symbol]
 
     def _execute_trade(self, position, trade_quantity, trade_price, commission, trade_date, start_date):
@@ -168,8 +173,9 @@ class Portfolio:
         currency = trade.find('Instrument/Currency').text
         isin = trade.get('isin') # Read ISIN from attribute
 
-        if not isin:
-            return
+        # [Fix] Allow processing even if ISIN is missing (e.g. legacy imports)
+        # if not isin:
+        #    return
         
         quantity = Decimal(trade.find('Execution/Quantity').text.replace(',', '.'))
         price = Decimal(trade.find('Execution/Price').text.replace(',', '.'))

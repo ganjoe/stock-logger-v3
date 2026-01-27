@@ -93,105 +93,118 @@ def process_csv(filepath, existing_ids, ticker_map):
     SECTION_INFO = "Informationen zum Finanzinstrument"
 
     with open(filepath, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        current_section, headers = None, {}
+        all_rows = list(csv.reader(f))
 
-        for row in reader:
-            if not row or len(row) < 2: continue
-            
-            section_name, row_type = row[0].strip(), row[1].strip()
+    # --- PASS 1: Metadata (Informationen zum Finanzinstrument) ---
+    current_section, headers = None, {}
+    for row in all_rows:
+        if not row or len(row) < 2: continue
+        section_name, row_type = row[0].strip(), row[1].strip()
 
-            if row_type == "Header":
-                current_section = section_name
-                headers = {name.strip(): idx for idx, name in enumerate(row)}
+        if row_type == "Header":
+            current_section = section_name
+            headers = {name.strip(): idx for idx, name in enumerate(row)}
+            continue
+
+        if row_type == "Data" and current_section == SECTION_INFO:
+            try:
+                sym = row[headers["Symbol"]]
+                sym = ticker_map.get(sym, sym)
+                name = row[headers["Beschreibung"]]
+                isin = row[headers["Wertpapier-ID"]]
+                instrument_metadata[sym] = {"name": name, "id": isin}
+            except (KeyError, IndexError):
                 continue
 
-            if row_type == "Data" and current_section:
-                # --- METADATA ---
-                if current_section == SECTION_INFO:
-                    try:
-                        sym = row[headers["Symbol"]]
-                        name = row[headers["Beschreibung"]]
-                        isin = row[headers["Wertpapier-ID"]]
-                        instrument_metadata[sym] = {"name": name, "id": isin}
-                    except (KeyError, IndexError):
-                        continue
-                
+    # --- PASS 2: Transactions (Trades, Divs, Deposits) ---
+    current_section, headers = None, {}
+    for row in all_rows:
+        if not row or len(row) < 2: continue
+        section_name, row_type = row[0].strip(), row[1].strip()
+
+        if row_type == "Header":
+            current_section = section_name
+            headers = {name.strip(): idx for idx, name in enumerate(row)}
+            continue
+
+        if row_type == "Data" and current_section:
+            if current_section == SECTION_INFO: continue
+
                 # --- TRADES ---
-                if current_section == SECTION_TRADES:
-                    try:
-                        sym = row[headers["Symbol"]]
-                        original_sym = sym
-                        sym = ticker_map.get(sym, sym)
-                        if original_sym != sym:
-                            print(f"-> [TC-070] Mapped trade: {original_sym} -> {sym}")
+            if current_section == SECTION_TRADES:
+                try:
+                    sym = row[headers["Symbol"]]
+                    original_sym = sym
+                    sym = ticker_map.get(sym, sym)
+                    if original_sym != sym:
+                        print(f"-> [TC-070] Mapped trade: {original_sym} -> {sym}")
 
-                        raw_date = row[headers["Datum/Zeit"]]
-                        qty = row[headers["Menge"]]
-                        proceeds = row[headers["Erlös"]]
-                        commission = row[headers["Prov./Gebühr"]]
-                        
-                        trade_id = generate_hash(f"{raw_date}{sym}{qty}{proceeds}{commission}")
-                        if trade_id in existing_ids: continue
+                    raw_date = row[headers["Datum/Zeit"]]
+                    qty = row[headers["Menge"]]
+                    proceeds = row[headers["Erlös"]]
+                    commission = row[headers["Prov./Gebühr"]]
+                    
+                    trade_id = generate_hash(f"{raw_date}{sym}{qty}{proceeds}{commission}")
+                    if trade_id in existing_ids: continue
 
-                        date_fmt, time_fmt = parse_date_time(raw_date)
-                        
-                        # [D-070] Internal Terminology: We use 'commission' strictly here.
-                        new_trades.append({
-                            "id": trade_id, "date": date_fmt, "time": time_fmt,
-                            "symbol": sym, "currency": row[headers["Währung"]],
-                            "qty": to_german_number(qty),
-                            "price": to_german_number(row[headers["T.-Kurs"]]),
-                            "commission": to_german_number(commission),
-                            "proceeds": to_german_number(proceeds)
-                        })
-                        existing_ids.add(trade_id)
-                    except (KeyError, IndexError): continue
+                    date_fmt, time_fmt = parse_date_time(raw_date)
+                    
+                    # [D-070] Internal Terminology: We use 'commission' strictly here.
+                    new_trades.append({
+                        "id": trade_id, "date": date_fmt, "time": time_fmt,
+                        "symbol": sym, "currency": row[headers["Währung"]],
+                        "qty": to_german_number(qty),
+                        "price": to_german_number(row[headers["T.-Kurs"]]),
+                        "commission": to_german_number(commission),
+                        "proceeds": to_german_number(proceeds)
+                    })
+                    existing_ids.add(trade_id)
+                except (KeyError, IndexError): continue
 
                 # --- DIVIDENDS ---
-                elif current_section == SECTION_DIVIDENDS:
-                    try:
-                        if any("Gesamt" in col for col in row): continue
-                        desc = row[headers["Beschreibung"]]
-                        sym = extract_symbol_from_desc(desc)
-                        original_sym = sym
-                        sym = ticker_map.get(sym, sym)
-                        if original_sym != sym:
-                            print(f"-> [TC-070] Mapped dividend: {original_sym} -> {sym}")
-                        
-                        raw_date = row[headers["Datum"]]
-                        amount = row[headers["Betrag"]]
-                        
-                        div_id = generate_hash(f"{raw_date}{sym}{amount}{desc}")
-                        if div_id in existing_ids: continue
+            elif current_section == SECTION_DIVIDENDS:
+                try:
+                    if any("Gesamt" in col for col in row): continue
+                    desc = row[headers["Beschreibung"]]
+                    sym = extract_symbol_from_desc(desc)
+                    original_sym = sym
+                    sym = ticker_map.get(sym, sym)
+                    if original_sym != sym:
+                        print(f"-> [TC-070] Mapped dividend: {original_sym} -> {sym}")
+                    
+                    raw_date = row[headers["Datum"]]
+                    amount = row[headers["Betrag"]]
+                    
+                    div_id = generate_hash(f"{raw_date}{sym}{amount}{desc}")
+                    if div_id in existing_ids: continue
 
-                        date_fmt, _ = parse_date_time(raw_date)
-                        new_divs.append({
-                            "id": div_id, "date": date_fmt, "symbol": sym, 
-                            "amount": to_german_number(amount),
-                            "currency": row[headers["Währung"]], "desc": desc
-                        })
-                        existing_ids.add(div_id)
-                    except (KeyError, IndexError): continue
+                    date_fmt, _ = parse_date_time(raw_date)
+                    new_divs.append({
+                        "id": div_id, "date": date_fmt, "symbol": sym, 
+                        "amount": to_german_number(amount),
+                        "currency": row[headers["Währung"]], "desc": desc
+                    })
+                    existing_ids.add(div_id)
+                except (KeyError, IndexError): continue
 
                 # --- DEPOSITS ---
-                elif current_section == SECTION_DEPOSITS:
-                    try:
-                        if any("Gesamt" in col for col in row): continue
-                        desc, amount = row[headers["Beschreibung"]], row[headers["Betrag"]]
-                        raw_date = row[headers["Abwicklungsdatum"]]
+            elif current_section == SECTION_DEPOSITS:
+                try:
+                    if any("Gesamt" in col for col in row): continue
+                    desc, amount = row[headers["Beschreibung"]], row[headers["Betrag"]]
+                    raw_date = row[headers["Abwicklungsdatum"]]
 
-                        dep_id = generate_hash(f"{raw_date}{desc}{amount}")
-                        if dep_id in existing_ids: continue
+                    dep_id = generate_hash(f"{raw_date}{desc}{amount}")
+                    if dep_id in existing_ids: continue
 
-                        date_fmt, _ = parse_date_time(raw_date)
-                        new_deposits.append({
-                            "id": dep_id, "date": date_fmt, "desc": desc,
-                            "amount": to_german_number(amount),
-                            "currency": row[headers["Währung"]]
-                        })
-                        existing_ids.add(dep_id)
-                    except (KeyError, IndexError): continue
+                    date_fmt, _ = parse_date_time(raw_date)
+                    new_deposits.append({
+                        "id": dep_id, "date": date_fmt, "desc": desc,
+                        "amount": to_german_number(amount),
+                        "currency": row[headers["Währung"]]
+                    })
+                    existing_ids.add(dep_id)
+                except (KeyError, IndexError): continue
                         
     return new_trades, new_divs, new_deposits, instrument_metadata
 
