@@ -1,0 +1,11 @@
+ID,Category,Requirement,Specification
+ICD-010,Architecture,Shared Storage,"Verzeichnis: ""./data/market/"". ""datafetcher.py"" schreibt (Provider), ""portfolio.py"" liest (Consumer)."
+ICD-020,File System,Namenskonvention Assets,"Dateiname: ""{ISIN}.json"". (Beispiel: ""US0378331005.json"")."
+ICD-030,File System,Namenskonvention FX,"Dateiname: ""{BASE}{QUOTE}.json"". (Beispiel: ""USDEUR.json""). Logik: Wieviel {QUOTE} bekomme ich für 1 {BASE}?"
+ICD-040,JSON Schema,Asset Struktur (""{ISIN}.json""),"Root-Level: ""isin"", ""symbol"", ""last_update"", ""market_price"" (Float, Shortcut zum aktuellen Close). History-Level: ""history"": Dict { ""YYYY-MM-DD"": CandleObject }. CandleObject: { ""open"": Float, ""high"": Float, ""low"": Float, ""close"": Float, ""volume"": Int }."
+ICD-050,JSON Schema,FX Struktur (""{PAIR}.json""),"Muss exakt folgende Struktur haben: 1. ""pair"": String (z.B. ""USDEUR""), 2. ""rate"": Float (Aktueller Kurs), 3. ""history"": Dict { ""YYYY-MM-DD"": RateFloat }."
+ICD-055,Datenformat,Datums-Keys,"Alle Datumsangaben (Keys im history-Dict) müssen das Format ""YYYY-MM-DD"" (ISO 8601) haben."
+ICD-060,Interface,CLI Aufruf Syntax,"python datafetcher.py --mode update --assets ""[LIST]"" --fx ""[LIST]"""
+ICD-070,Interface,CLI Parameter ""assets"",""Format pro Item: ""ISIN:STARTDATE"" (Kommagetrennt). Beispiel: ""US0378331005:2020-01-01""."
+ICD-075,Interface,CLI Parameter ""fx"",""Format pro Item: ""PAIR:STARTDATE"" (Kommagetrennt). Beispiel: ""USDEUR:2020-01-01""."
+ICD-080,Logik,Fetch-Logik,"DataFetcher mappt ISIN intern auf Ticker (z.B. via yfinance) und holt Historie ab ""STARTDATE""."
