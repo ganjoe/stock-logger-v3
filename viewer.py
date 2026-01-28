@@ -17,15 +17,12 @@ def create_html_dashboard(xml_file, html_file):
         # --- Extract Summary Data ---
         start_date = root.findtext("Summary/ReportParams/StartDate", "N/A")
         end_date = root.findtext("Summary/ReportParams/EndDate", "N/A")
-        total_invested = root.findtext("Summary/TotalInvestedCapital", "0.0")
-        total_risk = root.findtext("Summary/TotalPortfolioRisk", "0.0")
+        total_invested = root.findtext("Summary/Inflow", "0.0")
+        asset_value = root.findtext("Summary/AssetValue", "0.0")
+        total_portfolio_value = root.findtext("Summary/TotalPortfolioValue", "0.0")
         
-        cash_balances = []
-        for cash in root.findall("Summary/CashBalances/Cash"):
-            currency = cash.attrib.get('currency', '')
-            value = cash.text
-            cash_balances.append(f"{value} {currency}")
-        cash_balances_str = " | ".join(cash_balances) if cash_balances else "N/A"
+        cash_value = root.findtext("Summary/CashValue", "N/A")
+        cash_balances_str = f"{cash_value} EUR" if cash_value != "N/A" else "N/A"
 
         # --- Extract Period Metrics ---
         # [Update] RealizedPnL is now a single aggregated value in EUR
@@ -38,12 +35,11 @@ def create_html_dashboard(xml_file, html_file):
         unrealized_gains = root.findtext("Summary/UnrealizedGains", "0,00")
         unrealized_losses = root.findtext("Summary/UnrealizedLosses", "0,00")
 
-        dividends = []
-        for div in root.findall("Summary/PeriodMetrics/Dividends/Dividend"):
-            currency = div.attrib.get('currency', '')
-            value = div.text
-            dividends.append(f"{value} {currency}")
-        dividends_str = " | ".join(dividends) if dividends else "0.0"
+        dividends_node = root.find("Summary/PeriodMetrics/Dividends")
+        if dividends_node is not None:
+            dividends_str = f"{dividends_node.text} {dividends_node.get('currency', 'EUR')}"
+        else:
+            dividends_str = "0.0"
 
         # --- Extract Position Data ---
         positions_data = []
@@ -71,7 +67,7 @@ def create_html_dashboard(xml_file, html_file):
             df = df[ordered_headers] # Ensure column order
             
             # Prettify column headers
-            df.columns = [' '.join(re.findall('[A-Z][^A-Z]*', col)) if col != 'Symbol' else col for col in df.columns]
+            df.columns = [col.replace('InvestedCapital_EUR_Cost', 'Invested Capital (EUR)').replace('_', ' ') for col in df.columns]
 
         # --- Generate HTML ---
         html_content = f"""
@@ -152,8 +148,12 @@ def create_html_dashboard(xml_file, html_file):
                     <p>{total_invested}</p>
                 </div>
                 <div class="card">
-                    <h3>Total Portfolio Risk</h3>
-                    <p>{total_risk}</p>
+                    <h3>Asset Value</h3>
+                    <p>{asset_value}</p>
+                </div>
+                <div class="card">
+                    <h3>Total Portfolio Value</h3>
+                    <p>{total_portfolio_value}</p>
                 </div>
                 <div class="card">
                     <h3>Cash Balances</h3>

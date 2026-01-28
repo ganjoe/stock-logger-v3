@@ -240,7 +240,7 @@ class Portfolio:
         self.cash_balance[currency] += amount
 
         # ONLY include specific transfers in the theoretical inflow (S-ALG-230)
-        if desc == 'Elektronischer Guthabentransfer':
+        if desc == 'Elektronischer Guthabentransfer' or desc.startswith('Auszahlung'):
             trans_date_str = transaction.find('Date').text
             trans_date = parse_xml_date(trans_date_str)
             fx_rate = self.market_data.get_fx_rate(f"{currency}EUR", trans_date)
