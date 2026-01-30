@@ -1,0 +1,249 @@
+<?xml version="1.0"?>
+<TradeLog>
+    <Trades>
+        <!-- 2. Simple Long Trade (Buy) -->
+        <Trade id="test_trade_002" name="Test Symbol A" isin="TEST0000000A">
+            <Meta>
+                <Date>02.01.2025</Date>
+                <Time>10:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_A</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>10,00</Quantity>
+                <Price>100,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>-1002,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 3. Simple Long Trade (Sell - Full Exit) -->
+        <Trade id="test_trade_003" name="Test Symbol A" isin="TEST0000000A">
+            <Meta>
+                <Date>03.01.2025</Date>
+                <Time>14:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_A</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>-10,00</Quantity>
+                <Price>110,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>1098,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 4. Simple Short Trade (Sell to Open) -->
+        <Trade id="test_trade_004" name="Test Symbol B" isin="TEST0000000B">
+            <Meta>
+                <Date>04.01.2025</Date>
+                <Time>11:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_B</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>-10,00</Quantity>
+                <Price>100,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>998,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 5. Simple Short Trade (Buy to Cover - Full Exit) -->
+        <Trade id="test_trade_005" name="Test Symbol B" isin="TEST0000000B">
+            <Meta>
+                <Date>05.01.2025</Date>
+                <Time>15:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_B</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>10,00</Quantity>
+                <Price>90,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>-902,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 6. Partial Scenarios (Long Entry) -->
+        <Trade id="test_trade_006" name="Test Symbol C" isin="TEST0000000C">
+            <Meta>
+                <Date>06.01.2025</Date>
+                <Time>09:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_C</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>10,00</Quantity>
+                <Price>100,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>-1002,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 7. Partial Sell (Long - Reduce Position) -->
+        <Trade id="test_trade_007" name="Test Symbol C" isin="TEST0000000C">
+            <Meta>
+                <Date>07.01.2025</Date>
+                <Time>10:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_C</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>-5,00</Quantity>
+                <Price>110,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>548,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 8. Adding to Position (Long - Pyramid) -->
+        <Trade id="test_trade_008" name="Test Symbol C" isin="TEST0000000C">
+            <Meta>
+                <Date>08.01.2025</Date>
+                <Time>11:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_C</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>5,00</Quantity>
+                <Price>105,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>-527,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 9. Full Exit (Long - Close Remainder) -->
+        <Trade id="test_trade_009" name="Test Symbol C" isin="TEST0000000C">
+            <Meta>
+                <Date>09.01.2025</Date>
+                <Time>16:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_C</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>-10,00</Quantity>
+                <Price>120,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>1198,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 10. Flip Scenario (Long Entry) -->
+        <Trade id="test_trade_010" name="Test Symbol D" isin="TEST0000000D">
+            <Meta>
+                <Date>10.01.2025</Date>
+                <Time>10:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_D</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>10,00</Quantity>
+                <Price>100,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>-1002,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 11. Flip Action (Sell 20: Close 10 Long, Open 10 Short) -->
+        <Trade id="test_trade_011" name="Test Symbol D" isin="TEST0000000D">
+            <Meta>
+                <Date>11.01.2025</Date>
+                <Time>13:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_D</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>-20,00</Quantity>
+                <Price>110,00</Price>
+                <Commission>-4,00</Commission>
+                <Proceeds>2196,00</Proceeds>
+            </Execution>
+        </Trade>
+
+        <!-- 12. Flip Exit (Cover Short) -->
+        <Trade id="test_trade_012" name="Test Symbol D" isin="TEST0000000D">
+            <Meta>
+                <Date>12.01.2025</Date>
+                <Time>10:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>SYM_D</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>10,00</Quantity>
+                <Price>105,00</Price>
+                <Commission>-2,00</Commission>
+                <Proceeds>-1052,00</Proceeds>
+            </Execution>
+        </Trade>
+    </Trades>
+
+    <DepositsWithdrawals>
+        <!-- 1. Cash Inflow (Initial Deposit) -->
+        <Transaction id="test_cash_001">
+            <Date>01.01.2025</Date>
+            <Desc>Test Inflow</Desc>
+            <Amount>10.000,00</Amount>
+            <Currency>EUR</Currency>
+        </Transaction>
+
+        <!-- 13. Cash Outflow -->
+        <!-- Scenario:
+         Initial Inflow: 10,000.
+         Trade Profits (approx): +100 +100 -50 +175 +100 +50 +50 (Div) ~= +525.
+         Total Equity before Outflow ~= 10,575 (+50 Div) = 10,625 check?
+         Adj Equity = 10575 - 10000 = 575.
+         
+         HWM Adj: 575.
+         
+         Now Outflow of 5000.
+         Total Equity becomes ~5625.
+         Cum Inflow becomes 10000 - 5000 = 5000.
+         Adj Equity = 5625 - 5000 = 625.
+         Wait. Outflow shouldn't change Adj Equity.
+         If Outflow is -5000. Total Equity -5000. Cum Inflow -5000.
+         Net change correct.
+         
+         Drawdown Check:
+         If we had a small loss before outflow?
+         Lets check test_cash_013.
+    -->
+        <Transaction id="test_cash_013">
+            <Date>13.01.2025</Date>
+            <Desc>Test Outflow Large</Desc>
+            <Amount>-5000,00</Amount> <!-- Increased to 5000 to test robustness -->
+            <Currency>EUR</Currency>
+        </Transaction>
+    </DepositsWithdrawals>
+
+    <Dividends>
+        <Dividend id="test_div_014">
+            <Date>14.01.2025</Date>
+            <Symbol>SYM_A</Symbol>
+            <Amount>50,00</Amount>
+            <Currency>EUR</Currency>
+        </Dividend>
+    </Dividends>
+</TradeLog>

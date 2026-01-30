@@ -1,0 +1,15 @@
+ID,Category,Title,Description,Covered By
+F-OUT-010,Output,Filename,Die finale Ausgabedatei wird alm_trades-history.csv genannt.,-
+F-XML-010,XML,Numeric Elements,Die direkten Kind-Elemente von <TradeLog> sind reine Zahlen (z.B. <1>, <2>, <3>) ODER spezifische Tags wie <Dividend>, die die chronologische Reihenfolge der Events darstellen.,-
+F-XML-020,XML,Event Types,Jedes Element ist entweder ein Trade (Buy/Sell/Short/Cover), ein Transfer (Inflow/Outflow) oder eine Dividende (Dividend).,-
+F-XML-030,XML,Event ID,Der Tag-Name (z.B. "1", "2") oder das 'id' Attribut dient als eindeutige Event-ID.,-
+F-DATA-010,Data,Source Formats,Quellformat Datum: 'DD.MM.YYYY' (mit opt. Zeit). Quellformat Zahlen: Deutsch ('1.234,56').,-
+F-DATA-020,Data,Target Formats,Zielformat Datum: 'YYYY-MM-DD HH:MM:SS'. Zielformat Zahlen: US-Float ('1234.56').,-
+F-LOGIC-010,Logic,Trade Matching,Es gilt FIFO-Matching für Long (Sell schließt Buy) und Short (Buy schließt Sell). Teilausführungen werden unterstützt.,-
+F-LOGIC-020,Logic,Cash Flows,Einzahlungen/Auszahlungen werden als Events mit PnL=0 aber Equity_Change != 0 behandelt.,-
+F-LOGIC-025,Logic,Dividends,Dividenden (<Dividend>) erhöhen das Total Equity, zählen aber nicht zum Trading-PnL. Sie haben ein eigenes Event.,-
+F-LOGIC-030,Logic,FX Data Retrieval,Ersetze Platzhalter durch Abruf historischer Wechselkurse gemäß Schnittstellenbeschreibung 'icd_portfolio-datafetcher.csv'. Zugriff auf './data/market/{CUR}EUR.json' (ICD-030) und Lookup via Datum (ICD-050).,-
+F-CALC-050,Metrics,Trade-Level,Berechnung von PnL, Win/Loss, R-Multiple (optional), Holding Period pro abgeschlossenem Trade-Event.,-
+F-CALC-060,Metrics,Portfolio-Level (Plotting),Berechnung von kumulativen Zeitreihen-Daten: Total_Equity, Equity_Curve (Trading PnL), Cum_WinRate, Cum_ProfitFactor.,-
+F-CALC-065,Metrics,Drawdown,Berechnung des Drawdown. WICHTIG: Cash Outflows (Entnahmen) dürfen NICHT als Drawdown gewertet werden. Die Berechnung muss bereinigt um Ein-/Auszahlungen erfolgen (z.B. basierend auf Equity Curve).,-
+F-CALC-070,Metrics,Inflows Balance,Berechnung von 'Cum_Inflow' = Summe aller Deposits - Summe aller Withdrawals.,-
