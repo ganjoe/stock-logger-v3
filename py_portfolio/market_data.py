@@ -4,7 +4,7 @@ import os
 from decimal import Decimal
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
-from alm_types import MarketDataProvider
+from .alm_types import MarketDataProvider
 
 class FileMarketDataProvider(MarketDataProvider):
     def __init__(self, data_dir: str = "./data/market"):

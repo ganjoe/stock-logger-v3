@@ -1,0 +1,19 @@
+ID,Category,Title,Description,Covered By
+F-OUT-020,Output,Interface Definition,Die Generierung der Ausgabedatei muss strikt der Definition in 'icd_portfolio-history.csv' folgen.,-
+F-XML-010,XML,Input Structure,Der Parser muss die Input-Struktur von <TradeLog> (nummerierte Tags oder spezifische Events) verarbeiten können.,-
+F-XML-020,XML,Input Types,Der Parser muss Trade-Events (Buy/Sell), Transfers (Inflow/Outflow) und Dividenden unterscheiden.,-
+F-DATA-010,Data,Source Formats,Der Parser muss deutsche Zahlenformate ('1.234,56') und Datumsformate ('DD.MM.YYYY') im Input erkennen und normalisieren.,-
+F-DATA-020,Data,ISIN Source,Die ISIN wird aus dem Attribut 'isin' des <Trade> Tags gelesen. Falls fehlend, Default "".,-
+F-DATA-030,Data,OHLC Source,OHLC-Daten für Snapshot/Positionen müssen über den MarketDataProvider abgerufen werden (Symbol + Datum). Fallback: 0.00.,-
+F-DATA-040,Data,StopLoss Source,StopLoss wird (aktuell) nicht im Input geliefert. Default-Wert ist 0.00.,-
+F-DATA-050,Data,Fees Source,Kommissionen kommen aus dem Tag <Commission> und werden als negative Werte (Kosten) interpretiert.,-
+F-LOGIC-010,Logic,Trade Matching,Es gilt FIFO-Matching für Long (Sell schließt Buy) und Short (Buy schließt Sell). Teilausführungen werden unterstützt.,-
+F-LOGIC-020,Logic,Cash Flows,Transfers (Ein-/Auszahlungen) verändern Cash Balance und Inflows, generieren aber kein Trading PnL.,-
+F-LOGIC-025,Logic,Dividenden,Dividenden erhöhen Cash Balance und TotalEquity. Sie werden (gemäß ICD) im Accounting PnL berücksichtigt, nicht im Trading PnL.,-
+F-LOGIC-030,Logic,FX Data Retrieval,Für die Umrechnung in Base-Currency (EUR) werden historische Wechselkurse (gemäß ICD-030 Logic) herangezogen.,-
+F-CALC-050,Metrics,PnL Calculation,Berechnung von 3 PnL-Typen: Trading (Kursdiff * Qty * ExitFX), Real (Trading - Gebühren), Accounting (Inkl. FX-Gewinne).,-
+F-CALC-060,Metrics,Portfolio KPIs,Berechnung von kumulativen KPIs: WinRate, ProfitFactor (basierend auf Trading PnL) und TotalEquity Kurve.,-
+F-CALC-065,Metrics,Drawdown,Berechnung des Drawdown basierend auf 'Adjusted Equity' (Total Equity bereinigt um Net Inflows).,-
+F-CALC-070,Metrics,Snapshot State,Für jedes Event muss ein vollständiger Portfoliostatus (Cash, Invested, MarketValue, Positionsliste) berechnet werden.,-
+F-CALC-100,Metrics,Expectancy,Der Erwartungswert pro Trade in Währung ((WinRate * AvgWin) - (LossRate * AvgLoss)).,-
+F-CALC-120,Metrics,Position Holding Time,Berechnung der Haltedauer (Holding Time) für jede Position in Tagen.,-

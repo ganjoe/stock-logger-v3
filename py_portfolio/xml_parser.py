@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
 import logging
-from alm_types import RawEvent, TransactionType
+from .alm_types import RawEvent, TransactionType
 
 class TradeLogParser:
     def parse_file(self, file_path: str) -> List[RawEvent]:

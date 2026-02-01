@@ -1,0 +1,124 @@
+ID,Category,Title,Description,Covered By
+ICD-GEN-010,General,Filename,Die Ausgabedatei heisst 'trades-history.xml'.,-
+ICD-GEN-020,General,Root Element,Das Root-Element ist <PortfolioHistory>.,-
+ICD-STR-010,Structure,Sequential Entries,Das Root-Element enthält für jede Änderung ein Child-Element <Change> mit fortlaufender ID als Attribut (z.B. id="00001").,-
+ICD-DAT-010,Data,Transaction Details,Innerhalb von <Change>: <Timestamp>, <Type>, <Symbol>, <Name>, <Ticker>, <Quantity>, <MarketValue>.,-
+ICD-DAT-040,Data,Portfolio Snapshot,Innerhalb von <Change> gibt es ein Element <Snapshot>, das den Portfolio-Zustand NACH der Änderung abbildet.,-
+ICD-DAT-041,Data,Snapshot Content,"Der Snapshot enthält <Inflows>, <Cash>, <Invested>, <TotalEquity>, <Positions>, <MarketValue> und <Performance> als Aggregate.",-
+ICD-DAT-042,Data,Position Details,"Jede <Position> enthält <ISIN>, <AvgEntryPrice>, <AccumulatedFees>, <OHLC>, <StopLoss>, <Currency>, <ExchangeRate>, <HoldingTime> und <Performance>.",-
+ICD-CALC-010,Metrics,PnL Types,"<Performance> enthält drei PnL-Werte: <Trading> (Nur Kursgewinne, ohne FX/Gebühr), <Real> (Kursgewinne - Gebühren, ohne FX), <Accounting> (Inkl. FX und Gebühren = Buchhalterischer Gewinn in EUR).",-
+ICD-CALC-020,Metrics,Portfolio KPIs,"Auf Portfolio-Ebene enthält <Performance> zusätzlich <ProfitFactor>, <WinRate> und <Expectancy> (alle basierend auf Trading-PnL).",-
+ICD-EX-010,Example,XML Structure,"<PortfolioHistory>
+  <!-- 1. Deposit (Inflow) -->
+  <Change id=""00001"">
+    <Timestamp>2025-01-01T09:00:00</Timestamp>
+    <Type>INFLOW</Type>
+    <MarketValue>
+       <Value>0.00</Value>
+       <OHLC><Open>0</Open><High>0</High><Low>0</Low><Close>0</Close></OHLC>
+    </MarketValue>
+    <Snapshot>
+      <Inflows>10000.00</Inflows>
+      <Cash>10000.00</Cash>
+      <Invested>0.00</Invested>
+      <MarketValue>
+         <Value>0.00</Value>
+         <OHLC>
+            <Open>0.00</Open>
+            <High>0.00</High>
+            <Low>0.00</Low>
+            <Close>0.00</Close>
+         </OHLC>
+      </MarketValue>
+      <Performance>
+         <Trading>0.00</Trading>
+         <Real>0.00</Real>
+         <Accounting>0.00</Accounting>
+         <ProfitFactor>0.00</ProfitFactor>
+         <WinRate>0.00</WinRate>
+         <Expectancy>0.00</Expectancy>
+      </Performance>
+      <TotalEquity>10000.00</TotalEquity>
+      <Positions />
+    </Snapshot>
+  </Change>
+  
+  <!-- 2. Dividend Event (assuming Portfolio already has AAPL and MSFT) -->
+  <Change id=""00005"">
+    <Timestamp>2025-02-15T10:00:00</Timestamp>
+    <Type>DIVIDEND</Type>
+    <Symbol>AAPL</Symbol>
+    <Name>Apple Inc.</Name>
+    <Quantity>0</Quantity>
+    <MarketValue>
+      <Value>50.00</Value>
+      <OHLC>...</OHLC>
+    </MarketValue>
+    <Snapshot>
+      <Inflows>10000.00</Inflows>
+      <Cash>2550.00</Cash>
+      <Invested>6450.00</Invested>
+      <MarketValue>
+         <Value>9500.00</Value>
+         <OHLC>
+            <Open>9400.00</Open>
+            <High>9600.00</High>
+            <Low>9350.00</Low>
+            <Close>9500.00</Close>
+         </OHLC>
+      </MarketValue>
+      <Performance>
+         <Trading>3050.00</Trading>
+         <Real>3035.00</Real>
+         <Accounting>2850.00</Accounting>
+         <ProfitFactor>2.50</ProfitFactor>
+         <WinRate>65.50</WinRate>
+         <Expectancy>150.25</Expectancy>
+      </Performance>
+      <TotalEquity>12050.00</TotalEquity>
+      <Positions>
+         <Position>
+            <Symbol>AAPL</Symbol>
+            <ISIN>US0378331005</ISIN>
+            <Quantity>10</Quantity>
+            <AvgEntryPrice>145.00</AvgEntryPrice>
+            <Value>1500.00</Value>
+            <Currency>USD</Currency>
+            <ExchangeRate>0.92</ExchangeRate>
+            <AccumulatedFees>5.00</AccumulatedFees>
+            <StopLoss>130.00</StopLoss>
+            <HoldingTime>14</HoldingTime>
+            <OHLC>
+               <Open>148.00</Open>
+               <High>151.00</High>
+               <Low>147.50</Low>
+               <Close>150.00</Close>
+            </OHLC>
+            <Performance>
+               <Trading>50.00</Trading>
+               <Real>45.00</Real>
+               <Accounting>41.40</Accounting>
+            </Performance>
+         </Position>
+         <Position>
+            <Symbol>MSFT</Symbol>
+            <ISIN>US5949181045</ISIN>
+            <Quantity>20</Quantity>
+            <AvgEntryPrice>250.00</AvgEntryPrice>
+            <Value>8000.00</Value>
+            <Currency>USD</Currency>
+            <ExchangeRate>0.92</ExchangeRate>
+            <AccumulatedFees>10.00</AccumulatedFees>
+            <StopLoss>230.00</StopLoss>
+            <HoldingTime>5</HoldingTime>
+            <OHLC>
+               <Open>399.00</Open>
+               <High>405.00</High>
+               <Low>398.00</Low>
+               <Close>400.00</Close>
+            </OHLC>
+         </Position>
+      </Positions>
+    </Snapshot>
+  </Change>
+</PortfolioHistory>",-
