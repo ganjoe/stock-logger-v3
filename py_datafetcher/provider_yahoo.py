@@ -15,7 +15,7 @@ class YahooProvider(IDataProvider):
             # auto_adjust=True handles splits/dividends in Close, usually preferred for charts
             # But for trade matching, unadjusted might be better? 
             # Review IMP doesn't specify. Standard defaults usually ok.
-            hist = ticker_obj.history(start=start_str, auto_adjust=False)
+            hist = ticker_obj.history(start=start_str, auto_adjust=True)
             
             if hist.empty:
                 raise DataFetcherError(f"No data found for ticker {ticker} from {start_str}")

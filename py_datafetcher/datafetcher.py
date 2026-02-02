@@ -7,6 +7,7 @@ from py_datafetcher.config_loader import load_config
 from py_datafetcher.cache_manager import CacheManager
 from py_datafetcher.provider_yahoo import YahooProvider
 from py_datafetcher.fetcher_core import FetcherOrchestrator
+from py_datafetcher.error_logger import ErrorLogger
 
 # Setup Logging
 logging.basicConfig(
@@ -87,6 +88,7 @@ def main():
     # 1. Load Config & Init Components
     config = load_config()
     cache = CacheManager(config.market_data_dir)
+    error_logger = ErrorLogger(config.market_data_dir)
     
     providers = []
     # Instantiate Providers based on Config
@@ -95,7 +97,7 @@ def main():
             providers.append(YahooProvider())
         # Add other providers here if implemented
         
-    orchestrator = FetcherOrchestrator(config, cache, providers)
+    orchestrator = FetcherOrchestrator(config, cache, providers, error_logger)
     
     success_count = 0
     fail_count = 0

@@ -4,5 +4,6 @@ F-DF-020,Functional,Configuration,API-Keys und Provider-Prioritäten werden in e
 F-DF-030,Functional,ISIN Resolution,"Der Abruf erfolgt via Ticker, der vom Aufrufer übergeben wird. Eine interne ISIN-zu-Ticker Auflösung ist nicht mehr notwendig.",-
 F-DF-040,Functional,Caching Strategy,Lokal vorhandene JSON-Dateien dienen als Cache. Neue Daten werden in die bestehende 'history' gemerged. Bestehende historische Daten (Vergangenheit) werden nicht überschrieben, nur lückenhafte/neue Tage ergänzt.,-
 F-DF-050,Functional,Market Price,Das Feld 'market_price' im JSON wird mit dem aktuellsten verfügbaren Kurs (Realtime oder End-of-Day) aktualisiert.,-
-F-DF-060,Functional,Error Handling,Können für eine ISIN bei keinem Provider Daten gefunden werden, wird ein Error-Log erstellt, aber der Prozess läuft für andere Assets weiter.,-
+F-DF-060,Functional,Error Logging Strategy,"Fehlgeschlagene Abrufe (Ticker ohne Daten bei allen Providern) werden strukturiert in einer dedizierten Logdatei persistiert, um eine Nachbearbeitung zu ermöglichen. Der Gesamtprozess läuft für nachfolgende Ticker weiter (Fail-Safe).",-
 F-DF-070,Functional,FX Fetching,Für FX-Paare (z.B. USDEUR) muss ebenfalls Historie und aktueller Kurs geladen werden.,-
+F-DF-080,Functional,Split Handling,"Der Datenabruf muss so konfiguriert sein, dass Splits (z.B. via Yahoo auto_adjust=True) direkt berücksichtigt sind, um bereinigte historische Kurse zu erhalten.",-

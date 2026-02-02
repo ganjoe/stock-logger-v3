@@ -3,12 +3,14 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional, Dict
 from .types import AppConfig, IDataProvider, AssetData, FxData, DataFetcherError, OHLCV
 from .cache_manager import CacheManager
+from .error_logger import ErrorLogger
 
 class FetcherOrchestrator:
-    def __init__(self, config: AppConfig, cache: CacheManager, providers: List[IDataProvider]):
+    def __init__(self, config: AppConfig, cache: CacheManager, providers: List[IDataProvider], error_logger: Optional[ErrorLogger] = None):
         self.config = config
         self.cache = cache
         self.providers = providers # These should be sorted by priority already
+        self.error_logger = error_logger
         self.default_start_date = date(2020, 1, 1)
 
     def _get_start_date(self, last_update_str: str, hint_date: Optional[date] = None) -> date:
@@ -48,6 +50,8 @@ class FetcherOrchestrator:
         # 2. Use Ticker provided by arguments
         if not ticker:
              logging.error(f"No ticker provided for {isin}. Skipping.")
+             if self.error_logger:
+                 self.error_logger.log_failure(isin, "UNKNOWN", "No ticker provided")
              return False
 
         # 3. Provider Loop
@@ -91,6 +95,8 @@ class FetcherOrchestrator:
 
         if not success:
             logging.error(f"All providers failed to update {isin}.")
+            if self.error_logger:
+                self.error_logger.log_failure(isin, ticker, "All providers failed")
             return False
 
         # 4. Merge and Save
