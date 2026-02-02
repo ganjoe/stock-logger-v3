@@ -1,0 +1,27 @@
+ID,Category,Title,Description,Covered By
+F-OUT-020,Output,Interface Definition,Die Generierung der Ausgabedatei muss strikt der Definition in 'icd_portfolio-history.csv' folgen.,icd_portfolio-history.csv
+F-XML-010,XML,Input Interface,Der Parser muss die Input-Datei gemäß der Definition in 'icd_trades.csv' verarbeiten (Root <TradeLog>).,icd_trades.csv
+F-XML-020,XML,Event Types,"Der Parser unterscheidet <Trades>, <Deposits..>. Transaktions-Typ (Buy/Sell) wird aus dem Vorzeichen von <Quantity> abgeleitet (Positiv=Buy, Negativ=Sell).",-
+F-DATA-010,Data,Source Formats,"Der Parser muss deutsche Zahlenformate (Komma als Dezimaltrenner) und Datumsformate ('DD.MM.YYYY') im Input erkennen und normalisieren. Tausendertrennzeichen (Punkt) sind NICHT erlaubt. Gültige Beispiele: '100', '100,00', '1234,56'. Ungültig: '1.234,56', '100.00'.",-
+F-DATA-020,Data,ISIN Source,Die ISIN wird aus dem Attribut 'isin' des <Trade> Tags gelesen. Falls fehlend, Default "".,-
+F-DATA-030,Data,OHLC Source,"OHLC-Daten müssen im Cache (./data/market/) vorhanden sein. Fehlen diese, muss der Mechanismus F-DATA-035 ausgelöst werden. Mit den OHLC-Daten werden die Kurse für die Bewertung der Positionen im Portfolio-Snapshot ermittelt.",ICD-DF-GEN-010;ICD-DF-JSN-010
+F-DATA-035,Data,Lazy Fetching,"Bei Cache-Miss Trigger 'datafetcher.py'. Optimierung: Liegt das Datum im bereits geladenen Zeitraum (<= last_update) und fehlt trotzdem, wird KEIN Fetch ausgelöst (Wochenende/Feiertag).",ICD-DF-CLI-020
+F-DATA-036,Data,Failed Fetch Deduplication,"Fehlgeschlagene Fetches werden in-memory gespeichert. Sobald ein Ticker (z.B. XDEF) einmal fehlschlägt, wird er NIEMALS WIEDER versucht - auch nicht für andere Datumswerte. Alle fehlgeschlagenen Fetches werden in 'log_market_data.txt' mit Zeitstempel und Vermerk '(ticker X blocked)' protokolliert.",-
+F-DATA-040,Data,StopLoss Source (Future),StopLoss wird (aktuell) nicht im Input geliefert. Default-Wert ist 0.00. Reserviert für zukünftiges Feature.,-
+F-DATA-050,Data,Fees Source,Kommissionen kommen aus dem Tag <Commission> und werden als negative Werte (Kosten) interpretiert.,-
+F-LOGIC-010,Logic,Trade Matching,Es gilt FIFO-Matching für Long (Sell schließt Buy) und Short (Buy schließt Sell). Teilausführungen werden unterstützt.,-
+F-LOGIC-020,Logic,Cash Flows,Transfers (Ein-/Auszahlungen) verändern Cash Balance und Inflows, generieren aber kein Trading PnL.,-
+F-LOGIC-025,Logic,Dividenden,Dividenden erhöhen Cash Balance und TotalEquity. Sie werden im Accounting PnL berücksichtigt (nicht Trading PnL).,icd_trades.csv (ICD-CP-DIV-010);icd_portfolio-history.csv
+F-LOGIC-030,Logic,FX Data Retrieval,Für die Umrechnung in Base-Currency (EUR) werden historische Wechselkurse aus dem Cache herangezogen.,ICD-DF-JSN-030
+F-CALC-050,Metrics,PnL Calculation,"Berechnung von 3 PnL-Typen: Trading (Brutto: Kursdiff * Qty, vor Gebühren), Real (Netto: Trading - Gebühren), Accounting (Real + FX-Gewinne).",-
+F-CALC-060,Metrics,Portfolio KPIs,Berechnung von kumulativen KPIs: WinRate, ProfitFactor (basierend auf Trading PnL) und TotalEquity Kurve.,-
+F-CALC-065,Metrics,Drawdown,Berechnung des Drawdown basierend auf 'Adjusted Equity' (Total Equity bereinigt um Net Inflows).,-
+F-CALC-070,Metrics,Snapshot State,Für jedes Event muss ein vollständiger Portfoliostatus (Cash, Invested, MarketValue, Positionsliste) berechnet werden.,-
+F-CALC-100,Metrics,Expectancy,Der Erwartungswert pro Trade in Währung ((WinRate * AvgWin) - (LossRate * AvgLoss)).,-
+F-CALC-120,Metrics,Position Holding Time,Berechnung der Haltedauer (Holding Time) für jede Position in Tagen.,-
+F-CALC-130,Metrics,Total Trades Statistics,"Im <Performance> Block wird ein neuer Node <TotalTrades> hinzugefügt mit Sub-Elementen: <ClosedTrades> (Anzahl vollständig geschlossener Positionen), <OpenPositions> (Anzahl aktuell offener Positionen), <Transactions> (Anzahl aller Buy + Sell Transaktionen).",-
+F-DEP-010,Dependencies,Datafetcher Interface,"Bei Cache-Miss ruft das Modul 'py_datafetcher' auf via CLI gemäß ICD-DF-CLI-010. Argumente: --mode update --assets 'ISIN:TICKER:DATE'.",ICD-DF-CLI-010;ICD-DF-CLI-020
+F-OUT-030,Output (Open),OHLC per Snapshot,"Gemäß ICD-DAT-041 soll <MarketValue> im Snapshot ein <OHLC> Element enthalten (Open/High/Low/Close des Tages). NICHT IMPLEMENTIERT.",ICD-DAT-041
+F-OUT-040,Output (Open),OHLC per Position,"Gemäß ICD-DAT-042 soll jede <Position> ein <OHLC> Element mit Tageskursen enthalten. NICHT IMPLEMENTIERT.",ICD-DAT-042
+F-OUT-050,Output (Open),Instrument Name,"Gemäß ICD-DAT-010 soll <Change> ein <Name> Element mit dem vollständigen Instrumentennamen enthalten. NICHT IMPLEMENTIERT.",ICD-DAT-010
+F-OUT-060,Output (Open),Ticker Element,"Gemäß ICD-DAT-010 soll <Change> ein <Ticker> Element enthalten (ggf. abweichend von Symbol). NICHT IMPLEMENTIERT.",ICD-DAT-010

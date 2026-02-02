@@ -1,14 +1,14 @@
 ID,Category,Title,Description,Incoming_Links,Outgoing_Links
 F-010,Functional,Import Source,"The system shall import trade data from CapTrader 'Activity Statements' provided in CSV format. The import process must support the 'Complex/Details' mode to ensure all necessary fields are available.",,S-IO-010
 F-020,Functional,Incremental Updates,"The system must be idempotent; when running the import on the same file multiple times, it shall ignore duplicates and not create redundant entries in the output.",,S-ALG-020
-F-030,Functional,Data Persistence,"All extracted data must be centrally stored in a trades.xml file, which serves as the 'Single Source of Truth' for downstream analysis.",,S-DAT-010
+F-030,Functional,Data Persistence,"All extracted data must be stored in a trades.xml file strictly following the interface definition in 'icd_trades.csv'.",,S-DAT-010
 F-040,Functional,Dividends,"The system shall detect dividend payments within the CSV and store them in a dedicated <Dividends> section in the XML.",,"S-DAT-025; S-IO-030"
 F-050,Functional,Cash Flow,"Transactions representing deposits or withdrawals must be identified and stored in a specific section to allow for transparent tracking of capital flows.",,"S-DAT-026; S-IO-035"
 F-060,Functional,Commission Extraction,"All transaction fees (commissions) must be extracted from the CSV and stored as a separate <Commission> tag for each trade.",,"S-IO-020; S-ALG-010"
 F-070,Functional,Instrument Metadata,"The system shall extract descriptive metadata for each traded instrument, specifically the full Name and a unique Identifier (ID, e.g., ISIN). This data is available in the 'Financial Instrument Information' section of the source CSV.",,"S-IO-040; S-DAT-050"
 F-080,Functional,File Archiving,"After a CSV file has been successfully processed and its data has been added, the system must move the source file to an oldcsv directory to prevent re-processing.",,S-IO-100
 F-290,Functional,Ticker Mapping,"The system must be able to normalize historical ticker symbols to their current equivalents (e.g., mapping '4GLD' to 'GLD') to ensure continuity in history.",,S-ALG-215
-D-010,Data,Semantic XML,"The output XML shall be logically grouped (e.g., Meta, Instrument, Execution) to maximize human readability and machine parsing.",,S-DAT-020
+D-010,Data,Interface Compliance,"The output XML structure must comply with the schema defined in 'icd_trades.csv' (Root <TradeLog> with subsections <Trades>, <DepositsWithdrawals>, <Dividends>).",,S-DAT-020
 D-020,Data,Data Completeness,"All critical trade fields must be preserved, including Symbol, Date, Quantity, Price, Fees, and Proceeds.",,"S-DAT-020; S-IO-020"
 D-030,Data,Numeric Format,"Numeric values in the XML output must use German notation (comma as the decimal separator) to align with downstream Excel/local tools.",,S-DAT-030
 D-040,Data,Date Format,"Dates shall be formatted as DD.MM.YYYY. The time of execution must be stored separately in HH:MM:SS format.",,S-DAT-040
@@ -26,7 +26,7 @@ S-IO-030,I/O (Spec),Dividend Mapping,"Parses the Dividend section, extracting am
 S-IO-035,I/O (Spec),Deposit Mapping,"Parses the 'Deposits & Withdrawals' section for cash flow entries.",F-050,TC-065
 S-IO-100,I/O (Spec),Archive Processed File,"Upon successful processing (if new data was written), the script moves the source CSV file into the ./oldcsv/ directory using os.rename.",F-080,TC-110
 S-IO-220,I/O (Spec),Load Map,"On startup, the system checks for ticker_map.json. If found, it loads it into a dictionary mapping = {""OLD"": ""NEW""}.",D-230,TC-080
-S-DAT-010,Struct (Spec),XML Root,"The root element <TradeLog> shall contain children <Trades> and <Dividends>.",F-030,TC-010
+S-DAT-010,Struct (Spec),XML Root,"The root element <TradeLog> and its children must follow ICD-CP-GEN-010 and ICD-CP-GEN-020.",F-030,TC-010
 S-DAT-020,Struct (Spec),Trade Element,"Trades are stored as <Trade id=""...""> with sub-elements for details.",D-010,TC-010
 S-DAT-025,Struct (Spec),Div Element,"Dividends are stored as <Dividend id=""..."">.",F-040,TC-060
 S-DAT-026,Struct (Spec),Dep Element,"Cash flows are stored as <Transaction id=""..."">.",F-050,TC-065
@@ -52,3 +52,6 @@ TC-140,Test Case,Special Character Handling,"Import a CSV containing symbols or 
 F-090,Functional,Filename Validation,"The system shall only process CSV files that start with the prefix 'U16537315', which corresponds to the broker account ID. Files not matching this prefix must be ignored.",,S-IO-006
 S-IO-006,I/O (Spec),Filename Prefix Check,"During file discovery or when a filename is provided, the script must check if the filename starts with 'U16537315'. If it doesn't, the file is skipped.",F-090,TC-150
 TC-150,Test Case,Invalid Filename,"Execute script with a CSV that does not start with 'U16537315'. Assert that the script ignores the file and does not process it.",S-IO-006,
+D-080,Data,Sign Consistency,"All monetary values must be stored with explicit signs where applicable (e.g., Commissions negative, Inflows positive), strictly following ICD definitions.",,S-IO-020
+Q-010,Quality,ICD Validation,"Integration tests must strictly validate the output XML structure against 'icd_trades.csv' (Tag definitions, nesting) to prevent regression.",D-010,TC-160
+TC-160,Test Case,Schema Validation,"Automated test: Load 'icd_trades.csv' and verify that every tag produced in 'trades.xml' is defined in the ICD.",Q-010,

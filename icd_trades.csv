@@ -1,0 +1,43 @@
+ID,Category,Title,Description,Covered By
+ICD-CP-GEN-010,General,Root Element,Das Root-Element ist <TradeLog>.,-
+ICD-CP-GEN-020,General,Child Sections,Der Inhalt ist in drei Hauptsektionen unterteilt: <Trades>, <DepositsWithdrawals>, <Dividends>.,-
+ICD-CP-TRD-010,Trades,Trade Element,Jeder Trade wird als <Trade> Element innerhalb von <Trades> gespeichert. Attribute: 'id', 'name', 'isin'.,-
+ICD-CP-TRD-020,Trades,Meta Data,Jeder Trade enthält einen <Meta> Block mit <Date> (DD.MM.YYYY) und <Time> (HH:MM:SS).,-
+ICD-CP-TRD-030,Trades,Instrument Data,Jeder Trade enthält einen <Instrument> Block mit <Symbol> und <Currency>.,-
+ICD-CP-TRD-040,Trades,Execution Data,Jeder Trade enthält einen <Execution> Block mit <Quantity>, <Price>, <Commission> und <Proceeds>. Alle Zahlen im deutschen Format (z.B. -2,00).,-
+ICD-CP-CSH-010,Cash,Transaction Element,Ein-/Auszahlungen werden als <Transaction> Element innerhalb von <DepositsWithdrawals> gespeichert. Attribut: 'id'.,-
+ICD-CP-CSH-020,Cash,Details,Jede Transaktion enthält <Date>, <Desc> (Beschreibung), <Amount> (Betrag) und <Currency>.,-
+ICD-CP-DIV-010,Dividends,Dividend Element,Dividenden werden als <Dividend> Element innerhalb von <Dividends> gespeichert. Attribut: 'id'.,-
+ICD-CP-DIV-020,Dividends,Details,Jede Dividende enthält <Date>, <Symbol>, <Amount> und <Currency>.,-
+ICD-CP-FMT-010,Format,Number Format,"Alle numerischen Werte verwenden ausschließlich Komma als Dezimaltrenner. Tausendertrennzeichen sind NICHT erlaubt. Format: Ganzzahlen ohne Separator (z.B. '100'), Dezimalzahlen mit Komma (z.B. '100,50' oder '12345,67'). Negative Werte mit führendem Minus (z.B. '-10,00').",-
+ICD-CP-EX-010,Example,Full Structure,"<TradeLog>
+    <Trades>
+        <!-- 2. Simple Long Trade (Buy) -->
+        <Trade id=""test_trade_002"" name=""Test Symbol A"" isin=""TEST0000000A"">
+            <Meta><Date>02.01.2025</Date><Time>10:00:00</Time></Meta>
+            <Instrument><Symbol>SYM_A</Symbol><Currency>EUR</Currency></Instrument>
+            <Execution><Quantity>10,00</Quantity><Price>100,00</Price><Commission>-2,00</Commission><Proceeds>-1002,00</Proceeds></Execution>
+        </Trade>
+        <!-- 3. Simple Long Trade (Sell - Full Exit) -->
+        <Trade id=""test_trade_003"" name=""Test Symbol A"" isin=""TEST0000000A"">
+            <Meta><Date>03.01.2025</Date><Time>14:00:00</Time></Meta>
+            <Instrument><Symbol>SYM_A</Symbol><Currency>EUR</Currency></Instrument>
+            <Execution><Quantity>-10,00</Quantity><Price>110,00</Price><Commission>-2,00</Commission><Proceeds>1098,00</Proceeds></Execution>
+        </Trade>
+        <Trade id=""test_trade_004"" name=""Test Symbol B"" isin=""TEST0000000B"">
+             <Meta><Date>04.01.2025</Date><Time>11:00:00</Time></Meta>
+             <Instrument><Symbol>SYM_B</Symbol><Currency>EUR</Currency></Instrument>
+             <Execution><Quantity>-10,00</Quantity><Price>100,00</Price><Commission>-2,00</Commission><Proceeds>998,00</Proceeds></Execution>
+        </Trade>
+    </Trades>
+    <DepositsWithdrawals>
+        <Transaction id=""test_cash_001"">
+            <Date>01.01.2025</Date><Desc>Test Inflow</Desc><Amount>10000,00</Amount><Currency>EUR</Currency>
+        </Transaction>
+    </DepositsWithdrawals>
+    <Dividends>
+        <Dividend id=""test_div_014"">
+            <Date>14.01.2025</Date><Symbol>SYM_A</Symbol><Amount>50,00</Amount><Currency>EUR</Currency>
+        </Dividend>
+    </Dividends>
+</TradeLog>",-

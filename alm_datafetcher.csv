@@ -1,0 +1,8 @@
+ID,Category,Title,Description,Covered By
+F-DF-010,Functional,Provider Chaining,Das System muss mehrere Online-Provider (z.B. Yahoo Finance, AlphaVantage) unterstützen. Wenn Provider A keine Daten für eine ISIN liefert, muss automatisch Provider B versucht werden.,-
+F-DF-020,Functional,Configuration,API-Keys und Provider-Prioritäten werden in einer Datei 'providers.json' gespeichert.,-
+F-DF-030,Functional,ISIN Resolution,"Der Abruf erfolgt via Ticker, der vom Aufrufer übergeben wird. Eine interne ISIN-zu-Ticker Auflösung ist nicht mehr notwendig.",-
+F-DF-040,Functional,Caching Strategy,Lokal vorhandene JSON-Dateien dienen als Cache. Neue Daten werden in die bestehende 'history' gemerged. Bestehende historische Daten (Vergangenheit) werden nicht überschrieben, nur lückenhafte/neue Tage ergänzt.,-
+F-DF-050,Functional,Market Price,Das Feld 'market_price' im JSON wird mit dem aktuellsten verfügbaren Kurs (Realtime oder End-of-Day) aktualisiert.,-
+F-DF-060,Functional,Error Handling,Können für eine ISIN bei keinem Provider Daten gefunden werden, wird ein Error-Log erstellt, aber der Prozess läuft für andere Assets weiter.,-
+F-DF-070,Functional,FX Fetching,Für FX-Paare (z.B. USDEUR) muss ebenfalls Historie und aktueller Kurs geladen werden.,-

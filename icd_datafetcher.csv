@@ -1,0 +1,9 @@
+ID,Category,Title,Description,Covered By
+ICD-DF-GEN-010,Architecture,Directory Structure,"Verzeichnis: ""./data/market/"". ""datafetcher.py"" schreibt (Producer), Consumer lesen JSON-Dateien.",-
+ICD-DF-NAM-010,File System,Asset Filename,"Dateiname für Assets ist ""{ISIN}.json"" (z.B. ""US0378331005.json"").",-
+ICD-DF-NAM-020,File System,FX Filename,"Dateiname für FX ist ""{BASE}{QUOTE}.json"" (z.B. ""USDEUR.json"").",-
+ICD-DF-JSN-010,JSON Schema,Asset Structure,"JSON Root muss keys ""isin"", ""symbol"", ""currency"", ""last_update"", ""market_price"" (Float) und ""history"" enthalten.",-
+ICD-DF-JSN-020,JSON Schema,Asset History,"""history"" ist ein Dict { ""YYYY-MM-DD"": { ""open"": float, ""high"": float, ""low"": float, ""close"": float, ""volume"": int } }.",-
+ICD-DF-JSN-030,JSON Schema,FX Structure,"FX JSON Root muss keys ""pair"", ""rate"" (Aktueller Kurs) und ""history"" enthalten. ""history"" ist Dict { ""YYYY-MM-DD"": float }.",-
+ICD-DF-CLI-010,Interface,CLI Arguments,"Aufruf: python datafetcher.py --mode update --assets ""[LIST]"" --fx ""[LIST]"".",-
+ICD-DF-CLI-020,Interface,Argument Assets,"Format: ""ISIN:TICKER:STARTDATE"" (Kommagetrennt). Beispiel: ""US0378331005:AAPL:2020-01-01"".",-

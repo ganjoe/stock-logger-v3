@@ -1,0 +1,13 @@
+ID,Category,Title,Description,Covered By
+F-WF-010,Workflow,Rollen-Definition,"Jede Rolle muss als separate Markdown-Datei in '.agent/workflows/' definiert sein. Format: YAML-Frontmatter (description) + Markdown-Body.",reviewer.md
+F-WF-020,Workflow,Rollen-Aktivierung,"Rollen werden durch Slash-Commands aktiviert (z.B. '/reviewer'). Der Command-Name entspricht dem Dateinamen ohne Extension.",workflows.md
+F-WF-030,Workflow,Change Injection,"Änderungen am System müssen immer beim Requirements Engineer (/brainstorming) beginnen und in einer alm_*.csv dokumentiert werden.",-
+F-WF-040,Workflow,Iterative Korrektur,"Bei Non-Compliance im Review erfolgt Rücksprung zum passenden Schritt (ICD→ICD, ALM→Brainstorming, Code→Implementation).",-
+F-WF-050,Workflow,Artefakt-Kette,"Jede Rolle produziert ein definiertes Artefakt: brainstorming→alm_*.csv, architect→IMP_*.md, reviewer→Report, tester→tests/*.py.",-
+F-WF-060,Rollen,Requirements Engineer,"Moderiert Brainstorming, extrahiert Anforderungen. Output: Markdown-Tabelle mit F-IDs. Schreibt keine Implementation.",brainstorming.md
+F-WF-070,Rollen,Software Architect,"Transformiert ALM in Implementation Tasks (IMP_*.md). Definiert Skeleton + Work Orders für Junior AIs.",senior-sofware-engineer.md
+F-WF-080,Rollen,Reviewer,"Read-Only Analyse. Prüft: Fehlerbehandlung, ICD-Compliance, redundante Logikpfade. Output: Strukturierter Report.",reviewer.md
+F-WF-090,Rollen,Unit Test Engineer,"Erstellt Unit Tests nach AAA-Pattern. Fokus: Business-Logik, Edge Cases, Regression. Coverage-Ziel: 80%.",unittest-writer.md
+F-WF-100,Rollen,Integration Test Engineer,"Erstellt End-to-End Tests. Fokus: ICD-Compliance, Datenfluß zwischen Modulen, Golden-Master-Vergleich.",integration-tester.md
+F-WF-110,Isolation,Keine fachfremden Aufgaben,"Jede Rolle arbeitet nur in ihrem Verantwortungsbereich. Requirements Engineer implementiert nicht, Reviewer ändert keine Dateien.",-
+F-WF-120,Prüfung,Redundante Logikpfade,"Der Reviewer muss auf doppelte if/elif-Bedingungen mit überlappenden Kriterien prüfen (Lesson Learned: Double-Processing Bug).",reviewer.md

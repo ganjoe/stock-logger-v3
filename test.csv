@@ -1,7 +1,0 @@
-Section_Source,Item_ID,Category_Type,Title_Name,Description_Content,Trace_Relations,Extra_Data
-"3__Requirements__The__What_","REQ-CSV-01","Functional","Global Export","The system shall allow exporting all data sections (Req, Spec, Test) into a single CSV file for external editing.","SPEC-CSV-01",""
-"3__Requirements__The__What_","REQ-CSV-02","Functional","Global Import","The system must allow importing a unified CSV file to update all tables simultaneously.","SPEC-CSV-02",""
-"3__Requirements__The__What_","REQ-UX-01","Usability","Smart Formatting","Upon import, the system must automatically restore visual badges (e.g. Functional, Core) and clickable trace links (e.g. REQ-001) from plain text.","SPEC-CSV-02",""
-"4__Specifications__The__How_","SPEC-CSV-01","Core","Aggregation Logic","Iterate through all collapsible sections, extract table rows, and prepend a 'Section_Source' column to identify the origin table.","REQ-CSV-01","TEST-CSV-01"
-"4__Specifications__The__How_","SPEC-CSV-02","Logic","Smart Parsing","On import: 1. Use Col 1 to target correct table. 2. Check Col 2 to apply CSS badges. 3. Use Regex to convert IDs (REQ-XX) into anchor tags.","REQ-UX-01","TEST-CSV-01"
-"5__Test_Cases__Verification_","TEST-CSV-01","Integration","Roundtrip Cycle","1. Export current data. 2. Edit CSV in Excel (add row). 3. Import CSV. > Expect: New row appears, badges are colored, links are clickable.","SPEC-CSV-01 SPEC-CSV-02",""
