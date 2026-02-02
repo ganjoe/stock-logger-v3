@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<TradeLog>
+    <Trades>
+        <Trade id="test_trade_001" name="Stock A" isin="TEST00000001">
+            <Meta>
+                <Date>01.01.2026</Date>
+                <Time>10:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>STKA</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>100</Quantity>
+                <Price>50,00</Price>
+                <Commission>-10,00</Commission>
+                <Proceeds>-5010,00</Proceeds>
+            </Execution>
+        </Trade>
+        <Trade id="test_trade_002" name="Stock B" isin="TEST00000002">
+            <Meta>
+                <Date>02.01.2026</Date>
+                <Time>11:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>STKB</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>50</Quantity>
+                <Price>100,00</Price>
+                <Commission>-10,00</Commission>
+                <Proceeds>-5010,00</Proceeds>
+            </Execution>
+        </Trade>
+        <Trade id="test_trade_003" name="Stock A" isin="TEST00000001">
+            <Meta>
+                <Date>10.01.2026</Date>
+                <Time>14:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>STKA</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>-100</Quantity>
+                <Price>60,00</Price>
+                <Commission>-10,00</Commission>
+                <Proceeds>5990,00</Proceeds>
+            </Execution>
+        </Trade>
+        <Trade id="test_trade_004" name="Stock B" isin="TEST00000002">
+            <Meta>
+                <Date>11.01.2026</Date>
+                <Time>15:00:00</Time>
+            </Meta>
+            <Instrument>
+                <Symbol>STKB</Symbol>
+                <Currency>EUR</Currency>
+            </Instrument>
+            <Execution>
+                <Quantity>-50</Quantity>
+                <Price>99,00</Price>
+                <Commission>-10,00</Commission>
+                <Proceeds>4940,00</Proceeds>
+            </Execution>
+        </Trade>
+    </Trades>
+    <DepositsWithdrawals>
+        <DepositWithdrawal id="test_deposit_001">
+            <Meta>
+                <Date>31.12.2025</Date>
+                <Time>09:00:00</Time>
+            </Meta>
+            <Details>
+                <Amount>15000,00</Amount>
+                <Currency>EUR</Currency>
+            </Details>
+        </DepositWithdrawal>
+    </DepositsWithdrawals>
+    <Dividends>
+    </Dividends>
+</TradeLog>

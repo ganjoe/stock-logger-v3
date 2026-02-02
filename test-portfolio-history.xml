@@ -1,0 +1,148 @@
+<?xml version="1.0" ?>
+<PortfolioHistory>
+  <Performance>
+    <TotalRealizedPnL currency="EUR">990.00</TotalRealizedPnL>
+    <TotalFees currency="EUR">-40.00</TotalFees>
+    <PnLBreakdown>
+      <TradingPnL currency="EUR">950.00</TradingPnL>
+      <RealPnL currency="EUR">990.00</RealPnL>
+      <AccountingPnL currency="EUR">990.00</AccountingPnL>
+    </PnLBreakdown>
+    <WinRate unit="Percent">50.00</WinRate>
+    <ProfitFactor>34.00</ProfitFactor>
+    <MaxDrawdown unit="Percent">0.00</MaxDrawdown>
+    <Expectancy currency="EUR">495.00</Expectancy>
+    <TotalTrades>
+      <ClosedTrades>2</ClosedTrades>
+      <OpenPositions>0</OpenPositions>
+      <Transactions>4</Transactions>
+    </TotalTrades>
+  </Performance>
+  <Change id="test_trade_001">
+    <Timestamp>2026-01-01T10:00:00</Timestamp>
+    <Type>BUY</Type>
+    <Symbol>STKA</Symbol>
+    <Quantity>100.00</Quantity>
+    <MarketValue>
+      <Value>5000.00</Value>
+    </MarketValue>
+    <Snapshot>
+      <Inflows currency="EUR">0.00</Inflows>
+      <Cash currency="EUR">-4990.00</Cash>
+      <Invested currency="EUR">0.00</Invested>
+      <TotalEquity currency="EUR">-4990.00</TotalEquity>
+      <Drawdown unit="Percent">0.00</Drawdown>
+      <Positions>
+        <Position>
+          <Symbol>STKA</Symbol>
+          <ISIN>TEST00000001</ISIN>
+          <Quantity>100.00</Quantity>
+          <AvgEntryPrice>50.00</AvgEntryPrice>
+          <Value currency="EUR">0.00</Value>
+          <AccumulatedFees>-10.00</AccumulatedFees>
+          <Currency>EUR</Currency>
+          <ExchangeRate>1.00</ExchangeRate>
+          <HoldingDays>0</HoldingDays>
+          <Performance>
+            <UnrealizedPnL currency="EUR">-5000.00</UnrealizedPnL>
+          </Performance>
+        </Position>
+      </Positions>
+    </Snapshot>
+  </Change>
+  <Change id="test_trade_002">
+    <Timestamp>2026-01-02T11:00:00</Timestamp>
+    <Type>BUY</Type>
+    <Symbol>STKB</Symbol>
+    <Quantity>50.00</Quantity>
+    <MarketValue>
+      <Value>5000.00</Value>
+    </MarketValue>
+    <Snapshot>
+      <Inflows currency="EUR">0.00</Inflows>
+      <Cash currency="EUR">-9980.00</Cash>
+      <Invested currency="EUR">0.00</Invested>
+      <TotalEquity currency="EUR">-9980.00</TotalEquity>
+      <Drawdown unit="Percent">0.00</Drawdown>
+      <Positions>
+        <Position>
+          <Symbol>STKA</Symbol>
+          <ISIN>TEST00000001</ISIN>
+          <Quantity>100.00</Quantity>
+          <AvgEntryPrice>50.00</AvgEntryPrice>
+          <Value currency="EUR">0.00</Value>
+          <AccumulatedFees>-10.00</AccumulatedFees>
+          <Currency>EUR</Currency>
+          <ExchangeRate>1.00</ExchangeRate>
+          <HoldingDays>1</HoldingDays>
+          <Performance>
+            <UnrealizedPnL currency="EUR">-5000.00</UnrealizedPnL>
+          </Performance>
+        </Position>
+        <Position>
+          <Symbol>STKB</Symbol>
+          <ISIN>TEST00000002</ISIN>
+          <Quantity>50.00</Quantity>
+          <AvgEntryPrice>100.00</AvgEntryPrice>
+          <Value currency="EUR">0.00</Value>
+          <AccumulatedFees>-10.00</AccumulatedFees>
+          <Currency>EUR</Currency>
+          <ExchangeRate>1.00</ExchangeRate>
+          <HoldingDays>0</HoldingDays>
+          <Performance>
+            <UnrealizedPnL currency="EUR">-5000.00</UnrealizedPnL>
+          </Performance>
+        </Position>
+      </Positions>
+    </Snapshot>
+  </Change>
+  <Change id="test_trade_003">
+    <Timestamp>2026-01-10T14:00:00</Timestamp>
+    <Type>SELL</Type>
+    <Symbol>STKA</Symbol>
+    <Quantity>100.00</Quantity>
+    <MarketValue>
+      <Value>6000.00</Value>
+    </MarketValue>
+    <Snapshot>
+      <Inflows currency="EUR">0.00</Inflows>
+      <Cash currency="EUR">-3970.00</Cash>
+      <Invested currency="EUR">0.00</Invested>
+      <TotalEquity currency="EUR">-3970.00</TotalEquity>
+      <Drawdown unit="Percent">0.00</Drawdown>
+      <Positions>
+        <Position>
+          <Symbol>STKB</Symbol>
+          <ISIN>TEST00000002</ISIN>
+          <Quantity>50.00</Quantity>
+          <AvgEntryPrice>100.00</AvgEntryPrice>
+          <Value currency="EUR">0.00</Value>
+          <AccumulatedFees>-10.00</AccumulatedFees>
+          <Currency>EUR</Currency>
+          <ExchangeRate>1.00</ExchangeRate>
+          <HoldingDays>8</HoldingDays>
+          <Performance>
+            <UnrealizedPnL currency="EUR">-5000.00</UnrealizedPnL>
+          </Performance>
+        </Position>
+      </Positions>
+    </Snapshot>
+  </Change>
+  <Change id="test_trade_004">
+    <Timestamp>2026-01-11T15:00:00</Timestamp>
+    <Type>SELL</Type>
+    <Symbol>STKB</Symbol>
+    <Quantity>50.00</Quantity>
+    <MarketValue>
+      <Value>4950.00</Value>
+    </MarketValue>
+    <Snapshot>
+      <Inflows currency="EUR">0.00</Inflows>
+      <Cash currency="EUR">990.00</Cash>
+      <Invested currency="EUR">0.00</Invested>
+      <TotalEquity currency="EUR">990.00</TotalEquity>
+      <Drawdown unit="Percent">0.00</Drawdown>
+      <Positions/>
+    </Snapshot>
+  </Change>
+</PortfolioHistory>
