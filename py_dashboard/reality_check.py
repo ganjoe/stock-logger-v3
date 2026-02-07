@@ -37,7 +37,8 @@ def calculate_kpis(df):
         'Winrate': winrate,
         'ProfitFactor': profit_factor,
         'AvgR': avg_r,
-        'AvgLoss': avg_loss
+        'AvgLoss': avg_loss,
+        'TotalTrades': len(trades_only)
     }
 
 def get_status(kpis):
@@ -75,12 +76,25 @@ def render_reality_check(df_all, df_focus, account_summary):
     # 1. Account Summary (Outside functionality of Focus Input logic usually, but here displayed)
     # Using container for styling if needed, currently just columns
     st.markdown("### Account Summary")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Net Worth", f"€{account_summary['Net_Worth']:,.0f}")
-    c2.metric("Total Inflows", f"€{account_summary['Total_Inflows']:,.0f}")
-    c3.metric("Total Dividends", f"€{account_summary['Total_Dividends']:,.0f}")
-    # c4 Reserved or remove
-    # c4.metric("Buying Power", f"€{account_summary['Buying_Power']:,.0f}") 
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    with c1:
+        st.markdown("**Net Worth**")
+        st.write(f"€{account_summary['Net_Worth']:,.0f}")
+    with c2:
+        st.markdown("**Buying Power**")
+        st.write(f"€{account_summary['Buying_Power']:,.0f}")
+    with c3:
+        st.markdown("**Invested**")
+        st.write(f"€{account_summary['Invested']:,.0f}")
+    with c4:
+        st.markdown("**Total Inflows**")
+        st.write(f"€{account_summary['Total_Inflows']:,.0f}")
+    with c5:
+        st.markdown("**Total Dividends**")
+        st.write(f"€{account_summary['Total_Dividends']:,.0f}")
+    with c6:
+        st.markdown("**Total Commissions**")
+        st.write(f"€{account_summary['Total_Fees']:,.0f}")
     # Let's stick to Requirements: Dividend KPI explicitly requested.
     
     st.markdown("---")
@@ -113,6 +127,7 @@ def render_reality_check(df_all, df_focus, account_summary):
         render_row("Profit Factor", stats_all['ProfitFactor'], stats_focus['ProfitFactor'], "{:.2f}")
         render_row("Avg. R-Value", stats_all['AvgR'], stats_focus['AvgR'], "{:.2f}R")
         render_row("Avg. Loss (€)", stats_all['AvgLoss'], stats_focus['AvgLoss'], "€{:,.0f}")
+        render_row("Total Trades", stats_all['TotalTrades'], stats_focus['TotalTrades'], "{:,.0f}")
 
     with c_right:
          st.markdown(f"""

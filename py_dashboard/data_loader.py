@@ -18,7 +18,7 @@ def load_data():
     df['Date'] = pd.to_datetime(df['date'] + ' ' + df['time'], format="%Y-%m-%d %H:%M:%S")
     
     # Ensure numeric types
-    numeric_cols = ['Trade_PnL', 'Trade_R', 'Fee', 'Cashflow', 'Dividend', 'Equity', 'Cash', 'Total_Assets', 'Drawdown', 'Sum_Deposit', 'Sum_Withdrawal', 'Sum_Dividend', 'Trade_Count']
+    numeric_cols = ['Trade_PnL', 'Trade_R', 'Fee', 'Cashflow', 'Dividend', 'Equity', 'Cash', 'Total_Assets', 'Drawdown', 'Sum_Deposit', 'Sum_Withdrawal', 'Sum_Dividend', 'Sum_Fee', 'Trade_Count', 'Open_Positions']
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
@@ -63,14 +63,16 @@ def load_data():
         last_row = df.iloc[-1]
         summary = {
             'Net_Worth': last_row['Equity'],
-            'Buying_Power': last_row['Equity'], # Simplified, assumes 100% Cash/BP match or ignoring margin
-            'Total_Assets': last_row['Equity'], # Simplified
-            'Total_Inflows': last_row['Sum_Deposit'],
-            'Total_Dividends': last_row['Sum_Dividend']
+            'Buying_Power': last_row['Cash'],
+            'Invested': last_row['Total_Assets'],
+            'Total_Inflows': last_row['Sum_Deposit'] - last_row['Sum_Withdrawal'],
+            'Total_Dividends': last_row['Sum_Dividend'],
+            'Total_Fees': last_row['Sum_Fee']
         }
     else:
         summary = {
-            'Net_Worth': 0, 'Buying_Power': 0, 'Total_Assets': 0, 'Total_Inflows': 0, 'Total_Dividends': 0
+            'Net_Worth': 0, 'Buying_Power': 0, 'Invested': 0, 
+            'Total_Inflows': 0, 'Total_Dividends': 0, 'Total_Fees': 0
         }
     
     return df, summary
