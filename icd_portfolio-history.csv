@@ -4,10 +4,10 @@ ICD-GEN-020,General,Root Element,Das Root-Element ist <PortfolioHistory>.,-
 ICD-STR-010,Structure,Sequential Entries,Das Root-Element enthält für jede Änderung ein Child-Element <Change> mit fortlaufender ID als Attribut (z.B. id="00001").,-
 ICD-DAT-010,Data,Transaction Details,Innerhalb von <Change>: <Timestamp>, <Type>, <Symbol>, <Name>, <Ticker>, <Quantity>, <MarketValue>.,-
 ICD-DAT-040,Data,Portfolio Snapshot,Innerhalb von <Change> gibt es ein Element <Snapshot>, das den Portfolio-Zustand NACH der Änderung abbildet.,-
-ICD-DAT-041,Data,Snapshot Content,"Der Snapshot enthält <Inflows>, <Cash>, <Invested>, <TotalEquity>, <Positions>, <MarketValue> und <Performance> als Aggregate.",-
-ICD-DAT-042,Data,Position Details,"Jede <Position> enthält <ISIN>, <AvgEntryPrice>, <AccumulatedFees>, <OHLC>, <StopLoss>, <Currency>, <ExchangeRate>, <HoldingTime> und <Performance>.",-
-ICD-CALC-010,Metrics,PnL Types,"<Performance> enthält drei PnL-Werte: <Trading> (Nur Kursgewinne, ohne FX/Gebühr), <Real> (Kursgewinne - Gebühren, ohne FX), <Accounting> (Inkl. FX und Gebühren = Buchhalterischer Gewinn in EUR).",-
-ICD-CALC-020,Metrics,Portfolio KPIs,"Auf Portfolio-Ebene enthält <Performance> zusätzlich <ProfitFactor>, <WinRate> und <Expectancy> (alle basierend auf Trading-PnL).",-
+ICD-DAT-041,Data,Snapshot Content,"Der Snapshot enthält <Inflows> (inkl. Dividenden), <Cash>, <Invested> (Exposure), <TotalEquity>, <Positions>, <MarketValue> und <Performance> als Aggregate.",-
+ICD-DAT-042,Data,Position Details,"Jede <Position> enthält <ISIN>, <AvgEntryPrice> (Weighted Average), <AccumulatedFees>, <OHLC>, <StopLoss>, <Currency>, <ExchangeRate>, <HoldingTime> und <Performance>.",-
+ICD-CALC-010,Metrics,PnL Types,"<Performance> enthält drei PnL-Werte: <Trading> (Nur Kursgewinne, ohne FX/Gebühr), <Real> (Kursgewinne - Gebühren, ohne FX), <Accounting> (Inkl. FX und Gebühren = Buchhalterischer Gewinn in EUR). Alle Werte sind kumulativ.",-
+ICD-CALC-020,Metrics,Portfolio KPIs,"Auf Portfolio-Ebene enthält <Performance> zusätzlich <ProfitFactor>, <WinRate>, <Expectancy> und <TotalTrades> (mit <ClosedTrades>, <OpenPositions>, <Transactions>).",-
 ICD-EX-010,Example,XML Structure,"<PortfolioHistory>
   <!-- 1. Deposit (Inflow) -->
   <Change id=""00001"">
@@ -123,6 +123,11 @@ ICD-EX-010,Example,XML Structure,"<PortfolioHistory>
          <ProfitFactor>2.50</ProfitFactor>
          <WinRate>65.50</WinRate>
          <Expectancy>150.25</Expectancy>
+         <TotalTrades>
+            <ClosedTrades>5</ClosedTrades>
+            <OpenPositions>2</OpenPositions>
+            <Transactions>12</Transactions>
+         </TotalTrades>
       </Performance>
       <TotalEquity>12050.00</TotalEquity>
       <Positions>

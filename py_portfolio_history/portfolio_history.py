@@ -1,13 +1,13 @@
 import sys
 import argparse
 import logging
-from datetime import date, timedelta, datetime
-from .domain import TransactionType
+from datetime import datetime
+
 from .market_data import MarketDataManager
 from .xml_parser import XmlInputParser
-from .fifo_engine import FifoEngine
-from .calculator import PortfolioCalculator
+from .calculator import PortfolioCalculator, IMarketDataProvider
 from .xml_generator import XmlOutputGenerator
+from .types import EventWithSnapshot
 
 # Setup Logging
 logging.basicConfig(
@@ -25,81 +25,50 @@ def main():
     logging.info("Starting Portfolio History Analysis...")
     
     # 1. Components
+    # MarketDataManager implements IMarketDataProvider
     market_data = MarketDataManager("./data/market")
     xml_parser = XmlInputParser()
-    fifo_engine = FifoEngine()
     calculator = PortfolioCalculator(market_data)
     xml_gen = XmlOutputGenerator()
 
-    # 2. Parse Input
+    # 2. Parse Input (Unified)
     logging.info(f"Parsing input: {args.input}")
-    trades = xml_parser.parse_trades(args.input)
-    cash = xml_parser.parse_cash(args.input)
-    divs = xml_parser.parse_dividends(args.input)
+    transactions = xml_parser.parse_all(args.input)
     
-    # 3. Sort Events Timeline
-    # We need to process day by day.
-    # Collect all unique dates
-    all_dates = set()
-    all_dates.update(t.date for t in trades)
-    all_dates.update(c.date for c in cash)
-    all_dates.update(d.date for d in divs)
-    
-    if not all_dates:
-        logging.warning("No events found.")
+    if not transactions:
+        logging.warning("No transactions found.")
         return
 
-    sorted_dates = sorted(list(all_dates))
-    start_date = sorted_dates[0]
-    end_date = sorted_dates[-1] 
+    # 3. Sort Transactions
+    # Sort by date, then maybe ID or stable sort?
+    # Usually ID is chronological string, but date is primary.
+    # transactions (types.py) has 'date' as datetime.
+    transactions.sort(key=lambda x: x.date)
     
-    # Combined Event list
-    all_events = []
-    for t in trades: all_events.append(t)
-    for c in cash: all_events.append(c)
-    for d in divs: all_events.append(d)
+    history_events = []
     
-    # Sort by Date and Time
-    # TradeEvent has 'time', others default to start of day or specific logic?
-    # Helper to get sort key
-    def get_sort_key(e):
-        d = e.date
-        t_str = "00:00:00"
-        if hasattr(e, 'time'):
-            t_str = e.time
-        return datetime.combine(d, datetime.strptime(t_str, "%H:%M:%S").time())
-
-    all_events.sort(key=get_sort_key)
-    
-    event_snapshots = []
-    
-    
-    for event in all_events:
-        # Robust Instance Check by type name
-        type_name = type(event).__name__
-        es = None
+    # 4. Process Loop
+    logging.info("Processing transactions...")
+    for t in transactions:
+        snapshot = calculator.process_transaction(t)
+        history_events.append(EventWithSnapshot(t, snapshot))
         
-        if type_name == "TradeEvent":
-             fifo_engine.process_trade(event)
-             es = calculator.process_trade(event, fifo_engine)
-        elif type_name == "CashEvent":
-             es = calculator.process_cash(event, fifo_engine)
-        elif type_name == "DividendEvent":
-             es = calculator.process_dividend(event, fifo_engine)
-             
-        if es:
-            event_snapshots.append(es)
-        
-    # 4. Generate Output
-    logging.info("Calculating metrics...")
-    metrics = calculator.calculate_metrics(fifo_engine.closed_trades, fifo_engine)
-    
+    # 5. Generate Output
     logging.info("Generating XML...")
-    xml_str = xml_gen.generate(event_snapshots, metrics)
+    xml_str = xml_gen.generate(history_events)
     
     with open(args.output, "w", encoding='utf-8') as f:
         f.write(xml_str)
         
+    # Check for failure indications in calculator?
+    # Or just log success.
+    
+    # Final Summary Log
+    metrics = calculator.snapshots[-1].performance if calculator.snapshots else None
+    if metrics:
+        logging.info(f"Total Transactions: {metrics.total_transactions_count}")
+        logging.info(f"Total Realized PnL: {metrics.realized_pnl:.2f} EUR")
+    
     logging.info(f"Done. Output written to {args.output}")
 
 if __name__ == "__main__":

@@ -1,232 +1,385 @@
-from typing import List, Dict, Any
 from decimal import Decimal
-from datetime import date, datetime
-from .domain import (
-    PortfolioSnapshot, OpenPosition, PerformanceMetrics, 
-    IMarketDataProvider, TradeEvent, CashEvent, DividendEvent, 
-    TransactionType, ClosedTrade, EventSnapshot
+from datetime import date, datetime, timedelta
+from typing import List, Dict, Optional, Tuple
+from collections import defaultdict
+import logging
+
+# Use new types
+from .types import (
+    Transaction, Position, Tranche, ClosedTrade, 
+    PerformanceMetrics, PortfolioSnapshot
 )
-from .fifo_engine import FifoEngine
+
+# We still need the MarketData interface
+# Assuming it hasn't changed location, usually defined in market_data.py or similar
+# For type hinting, we can import or define Protocol
+from typing import Protocol
+
+class IMarketDataProvider(Protocol):
+    def get_market_price(self, isin: str, symbol: str, date_obj: date) -> Decimal: ...
+    def get_fx_rate(self, from_curr: str, to_curr: str, date_obj: date) -> Decimal: ...
+
 
 class PortfolioCalculator:
     def __init__(self, market_data: IMarketDataProvider):
         self.market_data = market_data
         
+        # State
         self.cash_balance_eur: Decimal = Decimal("0")
-        self.total_deposits_eur: Decimal = Decimal("0") # For Adj. Equity
+        self.inflows_total: Decimal = Decimal("0") # Deposits + Dividends (F-LOGIC-026)
+        
+        # Positions State: Symbol -> Position Object
+        self.open_positions: Dict[str, Position] = {}
+        
+        # History
+        self.closed_trades: List[ClosedTrade] = []
         self.snapshots: List[PortfolioSnapshot] = []
         
-        # Track Max Equity (HWM) for Drawdown
-        self.high_water_mark: Decimal = Decimal("0")
+        # Cumulative Metrics (F-CALC-140)
+        self.cum_trading_pnl: Decimal = Decimal("0")
+        self.cum_realized_pnl: Decimal = Decimal("0") # Trading - Fees
+        self.cum_accounting_pnl: Decimal = Decimal("0") # Real + FX (for divs etc)
+        self.cum_fees: Decimal = Decimal("0")
         
-        # NEW: F-CALC-130 - Track total transactions
         self.transaction_count: int = 0
+        
+        # High Water Mark for Drawdown
+        self.high_water_mark: Decimal = Decimal("0")
 
     def _convert_to_eur(self, amount: Decimal, currency: str, query_date: date) -> Decimal:
         if currency == "EUR": return amount
         rate = self.market_data.get_fx_rate(currency, "EUR", query_date)
         return amount * rate
 
-    def _create_snapshot(self, date_obj: date, event_info: str = "") -> PortfolioSnapshot:
-        """ Helper to build current state snapshot """
-        # Valuation of Open Positions
-        # Note: We rely on FifoEngine having updated the positions state externally (or we pass it?)
-        # Wait, FifoEngine state is external. We assume FifoEngine is up to date.
-        # But we need access to fifo engine instance? 
-        # The previous 'process_day' took 'fifo' as arg.
-        # We need to pass fifo to the create_snapshot or store it?
-        # Better: Pass 'fifo' to the process_* methods.
-        raise NotImplementedError("This helper assumes internal access to open positions, but fifo is external.")
+    def process_transaction(self, t: Transaction) -> PortfolioSnapshot:
+        """
+        Main entry point for any event. Dispatch based on type.
+        """
+        # We assume t.type is a string from parser constant
+        t_type = t.type.upper()
+        
+        snap = None
+        
+        if t_type in ["BUY", "SELL"]:
+            snap = self._process_trade(t)
+        elif t_type in ["DEPOSIT", "WITHDRAWAL"]:
+            snap = self._process_cash(t)
+        elif t_type == "DIVIDEND":
+            # XML Parser might call it DIVIDEND, but TransactionType enum might be different
+            # We'll stick to string handling for safety as types.py uses strings
+            snap = self._process_dividend(t)
+        else:
+            logging.warning(f"Unknown transaction type: {t_type}")
+            snap = self._create_snapshot(t.date)
+            
+        return snap
 
-    def process_trade(self, t: TradeEvent, fifo: FifoEngine) -> EventSnapshot:
-        date_obj = t.date
-        
-        # 1. Update Cash
-        value_local = t.price * t.quantity
-        value_eur = self._convert_to_eur(value_local, t.currency, date_obj)
-        comm_eur = self._convert_to_eur(t.commission, t.currency, date_obj)
-        
-        if t.type == TransactionType.BUY:
-            self.cash_balance_eur -= (value_eur + comm_eur)
-        elif t.type == TransactionType.SELL:
-            self.cash_balance_eur += (value_eur - comm_eur)
-        
-        # NEW: F-CALC-130 - Track transactions
+    def _process_trade(self, t: Transaction) -> PortfolioSnapshot:
         self.transaction_count += 1
-            
-        # 2. Snapshot
-        snap = self._make_snapshot(date_obj, fifo)
+        date_obj = t.date.date()
         
-        # 3. Wrap
-        return EventSnapshot(
-            event_id=t.id,
-            event_type=t.type.name, # Enum name
-            timestamp=datetime.combine(t.date, datetime.strptime(t.time, "%H:%M:%S").time()),
-            snapshot=snap,
-            symbol=t.symbol,
+        # 1. Update Cash (Immediate Fee impact + Principal)
+        # Note: Fees are distinct. Principal is Price * Qty.
+        # Fees are usually Commission field.
+        
+        total_value = t.price * t.quantity
+        total_value_eur = self._convert_to_eur(total_value, t.currency, date_obj)
+        fees_eur = self._convert_to_eur(t.commission, t.currency, date_obj)
+        
+        # Update Cumulative Fees
+        self.cum_fees += fees_eur
+        
+        if t.type == "BUY":
+            # Cash outflow: Principal + Fees
+            self.cash_balance_eur -= (total_value_eur + fees_eur)
+            
+            # Add Position Logic
+            self._handle_buy(t)
+            
+        elif t.type == "SELL":
+            # Cash inflow: Principal - Fees
+            self.cash_balance_eur += (total_value_eur - fees_eur)
+            
+            # Match Logic (LIFO)
+            self._handle_sell_lifo(t)
+
+        return self._create_snapshot(t.date)
+
+    def _handle_buy(self, t: Transaction):
+        symbol = t.symbol
+        
+        if symbol not in self.open_positions:
+            self.open_positions[symbol] = Position(
+                symbol=symbol,
+                isin=t.isin,
+                quantity=Decimal("0"),
+                avg_entry_price=Decimal("0"),
+                current_price=t.price,
+                market_value=Decimal("0"),
+                accumulated_fees=Decimal("0"),
+                realized_pnl=Decimal("0"),
+                unrealized_pnl=Decimal("0"),
+                holding_days=0,
+                currency=t.currency,
+                exchange_rate=Decimal("1.0"),
+                tranches=[]
+            )
+            
+        pos = self.open_positions[symbol]
+        
+        # Add Tranche
+        tranche = Tranche(
+            id=t.id,
+            date=t.date,
             quantity=t.quantity,
-            market_value=value_local # In original currency as per ICD example? Or EUR? ICD ex shows 150.00 for stock price?
-            # ICD Example: MarketValue <Value>150.00</Value> matches price usually? 
-            # Or is it total value? ICD says "MarketValue" -> Value. 
-            # Let's put total value of trade here.
+            price=t.price,
+            commission=t.commission,
+            isin=t.isin,
+            currency=t.currency
         )
-
-    def process_cash(self, c: CashEvent, fifo: FifoEngine) -> EventSnapshot:
-        date_obj = c.date
-        amount_eur = self._convert_to_eur(c.amount, c.currency, date_obj)
+        pos.tranches.append(tranche)
         
-        if c.type == TransactionType.DEPOSIT:
-            self.cash_balance_eur += amount_eur
-            self.total_deposits_eur += amount_eur
-        elif c.type == TransactionType.WITHDRAWAL:
-            self.cash_balance_eur -= amount_eur
-            self.total_deposits_eur -= amount_eur
+        # Update Position Aggregates
+        pos.quantity += t.quantity
+        pos.accumulated_fees += t.commission
+        
+        # Weighted Average Entry Price update
+        total_cost = sum(tr.quantity * tr.price for tr in pos.tranches)
+        if pos.quantity > 0:
+            pos.avg_entry_price = total_cost / pos.quantity
+
+    def _handle_sell_lifo(self, t: Transaction):
+        symbol = t.symbol
+        remaining_qty = t.quantity
+        
+        if symbol not in self.open_positions:
+            # Short Sell logic or Error?
+            # Assuming Long Only for now, or just logging warning
+            logging.warning(f"SELL without position for {symbol}. Ignoring matching logic.")
+            return
+
+        pos = self.open_positions[symbol]
+        
+        # LIFO Matching: Iterate from end
+        # We use a while loop popping from end or index access
+        
+        generated_closed_trades = []
+        
+        while remaining_qty > 0 and pos.tranches:
+            # Last In First Out
+            tranche = pos.tranches[-1] # Peek last
             
-        snap = self._make_snapshot(date_obj, fifo)
+            match_qty = min(remaining_qty, tranche.quantity)
+            
+            # Calculate PnL for this match
+            # Fees Allocation: 
+            # Buy Fee Portion = TrancheFee * (MatchQty / TrancheOriginalQty?) 
+            # Problem: We modified Tranche Qty in place. We should track original qty or unit fee?
+            # Simplification: Unit Fee = TrancheComm / TrancheQty
+            unit_buy_fee = tranche.commission / tranche.quantity if tranche.quantity > 0 else 0
+            buy_fee_part = unit_buy_fee * match_qty
+            
+            # Sell Fee Portion = SellComm * (MatchQty / TotalSellQty)
+            sell_fee_part = t.commission * (match_qty / t.quantity) if t.quantity > 0 else 0
+            
+            gross_pnl = (t.price - tranche.price) * match_qty
+            total_fees = buy_fee_part + sell_fee_part
+            real_pnl = gross_pnl - total_fees
+            
+            # --- CURRENCY CONVERSION FOR PNL ---
+            # PnL values are in trade currency. Need to convert to EUR for cumulative tracking?
+            # Yes, standardizing on EUR for accounting.
+            date_obj = t.date.date()
+            gross_pnl_eur = self._convert_to_eur(gross_pnl, t.currency, date_obj)
+            real_pnl_eur = self._convert_to_eur(real_pnl, t.currency, date_obj)
+            
+            # Update Cumulative Stats
+            self.cum_trading_pnl += gross_pnl_eur
+            self.cum_realized_pnl += real_pnl_eur
+            # Accounting PnL = Real PnL (in EUR)
+            self.cum_accounting_pnl += real_pnl_eur 
+            
+            # Create ClosedTrade Record
+            closed = ClosedTrade(
+                entry_id=tranche.id,
+                exit_id=t.id,
+                symbol=symbol,
+                quantity=match_qty,
+                entry_date=tranche.date,
+                exit_date=t.date,
+                entry_price=tranche.price,
+                exit_price=t.price,
+                gross_pnl=gross_pnl_eur, # Storing in EUR for consistency? Or Native?
+                # Types.py doesn't specify currency. Let's start storing EUR to match aggregations.
+                fees=self._convert_to_eur(total_fees, t.currency, date_obj),
+                real_pnl=real_pnl_eur,
+                holding_days=(t.date - tranche.date).days,
+                winning_trade=(real_pnl > 0)
+            )
+            self.closed_trades.append(closed)
+            
+            # Update Tranche
+            remaining_qty -= match_qty
+            
+            if match_qty == tranche.quantity:
+                pos.accumulated_fees -= tranche.commission # Reduce total fees by the tranche's full fee
+                pos.tranches.pop() # Remove fully closed tranche (LIFO pop is efficient)
+            else:
+                # Partial Close
+                tranche.quantity -= match_qty
+                tranche.commission -= buy_fee_part # Reduce remaining fee burden
+                pos.accumulated_fees -= buy_fee_part # Update position total fees matches tranche reduction
         
-        return EventSnapshot(
-            event_id=c.id,
-            event_type="INFLOW" if c.type == TransactionType.DEPOSIT else "OUTFLOW",
-            timestamp=datetime.combine(c.date, datetime.min.time()), # No time for cash usually
-            snapshot=snap,
-            market_value=c.amount # logic?
-        )
+        # After matching loop
+        # Update Position Aggregates
+        pos.quantity -= (t.quantity - remaining_qty)
+        # Recalculate Avg Price
+        if pos.quantity > 0:
+             total_cost = sum(tr.quantity * tr.price for tr in pos.tranches)
+             pos.avg_entry_price = total_cost / pos.quantity
+        else:
+            pos.avg_entry_price = Decimal("0")
+            
+        if pos.quantity == 0:
+            del self.open_positions[symbol]
 
-    def process_dividend(self, d: DividendEvent, fifo: FifoEngine) -> EventSnapshot:
-        date_obj = d.date
-        amount_eur = self._convert_to_eur(d.amount, d.currency, date_obj)
+    def _process_cash(self, t: Transaction) -> PortfolioSnapshot:
+        self.transaction_count += 1 # Is cash a transaction? "Transactions (Buy + Sell)" per requirement likely means Trades.
+        # Req F-CALC-130: "Transactions (Anzahl aller Buy + Sell Transaktionen)."
+        # So maybe NOT cash. But for now let's stick to strict interpretation: Buy+Sell.
+        # Revert increment if strict. But harmless to track. Let's follow req STRICTLY: Buy+Sell only?
+        # "Transactions (Anzahl aller Buy + Sell Transaktionen)" -> Yes.
+        self.transaction_count -= 1 # Undo helper increment if strictly Buy/Sell
+        
+        amount_eur = self._convert_to_eur(t.quantity, t.currency, t.date.date()) 
+        # Note: In cash events, quantity usually holds amount
+        
+        if t.type == "DEPOSIT":
+            self.cash_balance_eur += amount_eur
+            self.inflows_total += amount_eur
+        elif t.type == "WITHDRAWAL":
+            self.cash_balance_eur -= amount_eur # Amount is usually positive in XML, logic subtracts
+            # Withdrawals reduce Inflows? Or are Flows = In - Out?
+            # Usually Net Flow.
+            self.inflows_total -= amount_eur
+            
+        return self._create_snapshot(t.date)
+
+    def _process_dividend(self, t: Transaction) -> PortfolioSnapshot:
+        # F-LOGIC-026: Dividends treat as Inflows
+        # Dividends are income.
+        amount_eur = self._convert_to_eur(t.quantity, t.currency, t.date.date()) # Div amount in qty? Or Price?
+        # Usually Div event has amount. Mapping to Transaction struct: quantity = amount?
+        
         self.cash_balance_eur += amount_eur
+        self.inflows_total += amount_eur 
         
-        snap = self._make_snapshot(date_obj, fifo)
+        # Update Accounting PnL (Divs are profit)
+        self.cum_accounting_pnl += amount_eur
         
-        return EventSnapshot(
-            event_id=d.id,
-            event_type="DIVIDEND",
-            timestamp=datetime.combine(d.date, datetime.min.time()),
-            snapshot=snap,
-            symbol=d.symbol,
-            market_value=d.amount
-        )
+        return self._create_snapshot(t.date)
 
-    def _make_snapshot(self, date_obj: date, fifo: FifoEngine) -> PortfolioSnapshot:
-        raw_positions = fifo.get_open_positions_snapshot()
-        valued_positions = []
+    def _create_snapshot(self, timestamp: datetime) -> PortfolioSnapshot:
+        date_obj = timestamp.date()
+        
+        # Calculate Market Value of Open Positions
         total_market_value = Decimal("0")
         
-        for p in raw_positions:
-            curr_price = self.market_data.get_market_price(p.isin, p.symbol, date_obj)
+        for symbol, pos in self.open_positions.items():
+            # Get Price
+            price = self.market_data.get_market_price(pos.isin, symbol, date_obj)
+            fx_rate = self.market_data.get_fx_rate(pos.currency, "EUR", date_obj)
             
-            # Simple currency handling (same as before)
-            asset_currency = "EUR"
-            if p.isin.startswith("US"): asset_currency = "USD"
+            price_eur = price * fx_rate
+            mv_eur = pos.quantity * price_eur
             
-            price_eur = self._convert_to_eur(curr_price, asset_currency, date_obj)
-            mv = price_eur * p.quantity
-            cost_basis = p.avg_entry_price * p.quantity
+            pos.current_price = price
+            pos.market_value = mv_eur
+            pos.exchange_rate = fx_rate
             
-            p.current_price = curr_price
-            p.market_value = mv
-            p.unrealized_pnl = mv - (cost_basis * (price_eur/curr_price if curr_price>0 else 1)) # Rough
-            # NEW: F-CALC-120 - Calculate holding time from first entry
-            p.holding_days = (date_obj - p.first_entry_date).days 
+            # Calc Unrealized PnL (Market Value - Cost Basis)
+            # Cost Basis = Sum(Tranche.Qty * Tranche.Price) converted to EUR using CURRENT rate or HISTORICAL?
+            # Unrealized is usually: (CurrentPrice - AvgEntry) * Qty * CurrentFX
+            cost_basis_eur = pos.avg_entry_price * pos.quantity * fx_rate 
+            pos.unrealized_pnl = mv_eur - cost_basis_eur
             
-            valued_positions.append(p)
-            total_market_value += mv
+            # Holding Days (First Entry) - F-CALC-120
+            if pos.tranches:
+                first_date = min(tr.date for tr in pos.tranches)
+                pos.holding_days = (timestamp - first_date).days
             
+            total_market_value += mv_eur
+            
+        # Invested = Market Value (F-CALC-070 New Def: Exposure)
+        invested = total_market_value 
+        
         total_equity = self.cash_balance_eur + total_market_value
         
-        # High Water Mark Logic
-        adjusted_equity = total_equity - self.total_deposits_eur
-        if adjusted_equity > self.high_water_mark:
-            self.high_water_mark = adjusted_equity
+        # HWM
+        adj_equity = total_equity - self.inflows_total
+        if adj_equity > self.high_water_mark:
+            self.high_water_mark = adj_equity
             
         dd = Decimal("0")
         if self.high_water_mark > 0:
-            diff = self.high_water_mark - adjusted_equity
-            dd = (diff / self.high_water_mark) * 100
-
-        # Metrics
-        metrics = self.calculate_metrics(fifo.closed_trades, fifo)
+             dd = (self.high_water_mark - adj_equity) / self.high_water_mark * 100
+             
+        # Metrics Construction
+        # F-CALC-130: Stats
+        closed_count = len(self.closed_trades)
+        open_count = len(self.open_positions)
+        
+        metrics = PerformanceMetrics(
+            trading_pnl=self.cum_trading_pnl,
+            realized_pnl=self.cum_realized_pnl,
+            accounting_pnl=self.cum_accounting_pnl,
+            fees_total=self.cum_fees,
+            inflows_total=self.inflows_total,
+            win_rate=self._calc_win_rate(),
+            profit_factor=self._calc_profit_factor(),
+            expectancy=self._calc_expectancy(),
+            closed_trades_count=closed_count,
+            open_positions_count=open_count,
+            total_transactions_count=self.transaction_count
+        )
+        
+        # Clone positions for snapshot (shallow copy of dict values ok since we replace objects on update?)
+        # Better deep copy strictly, but let's assume one snapshot per event sequence.
+        # To be safe, we create a dict copy.
+        import copy
+        pos_snapshot = copy.deepcopy(self.open_positions)
 
         return PortfolioSnapshot(
-            date=date_obj,
-            cash_balance=self.cash_balance_eur,
-            invested_capital=total_market_value,
-            market_value_positions=total_market_value,
+            date=timestamp,
+            cash=self.cash_balance_eur,
+            invested=invested,
+            market_value_total=total_market_value,
             total_equity=total_equity,
+            inflows=self.inflows_total,
             drawdown=dd,
-            open_positions=valued_positions,
-            performance=metrics
+            performance=metrics,
+            positions=pos_snapshot
         )
 
-    def calculate_metrics(self, closed_trades: List[ClosedTrade], fifo: FifoEngine) -> PerformanceMetrics:
-        from .domain import PnLBreakdown
+    def _calc_win_rate(self) -> float:
+        if not self.closed_trades: return 0.0
+        wins = sum(1 for t in self.closed_trades if t.winning_trade)
+        return (wins / len(self.closed_trades)) * 100
+
+    def _calc_profit_factor(self) -> float:
+        gross_wins = sum(t.gross_pnl for t in self.closed_trades if t.gross_pnl > 0)
+        gross_losses = abs(sum(t.gross_pnl for t in self.closed_trades if t.gross_pnl <= 0))
+        if gross_losses == 0: return 999.0 if gross_wins > 0 else 0.0
+        return float(gross_wins / gross_losses)
+
+    def _calc_expectancy(self) -> float:
+        if not self.closed_trades: return 0.0
+        # Formula: (WinRate * AvgWin) - (LossRate * AvgLoss)
+        wins = [t.gross_pnl for t in self.closed_trades if t.gross_pnl > 0]
+        losses = [abs(t.gross_pnl) for t in self.closed_trades if t.gross_pnl <= 0]
         
-        if not closed_trades:
-            return PerformanceMetrics(
-                total_realized_pnl=Decimal(0),
-                total_fees=Decimal(0),
-                win_rate=Decimal(0),
-                profit_factor=Decimal(0),
-                max_drawdown=Decimal(0),
-                expectancy=Decimal(0),
-                pnl_breakdown=PnLBreakdown(
-                    trading_pnl=Decimal(0),
-                    real_pnl=Decimal(0),
-                    accounting_pnl=Decimal(0)
-                ),
-                total_closed_trades=0,
-                total_open_positions=0,
-                total_transactions=self.transaction_count
-            )
-            
-        total_pnl = sum(t.real_pnl for t in closed_trades)
-        total_fees = sum(t.fees for t in closed_trades)
+        avg_win = float(sum(wins) / len(wins)) if wins else 0.0
+        avg_loss = float(sum(losses) / len(losses)) if losses else 0.0
+        win_rate = len(wins) / len(self.closed_trades)
         
-        # NEW: F-CALC-050 - Calculate 3-tier PnL
-        # Trading PnL = gross_pnl (already calculated in ClosedTrade)
-        trading_pnl_total = sum(t.gross_pnl for t in closed_trades)
-        # Real PnL = Trading - Fees
-        real_pnl_total = sum(t.real_pnl for t in closed_trades)
-        # Accounting PnL = Real PnL (FX gains already included in conversions)
-        accounting_pnl_total = real_pnl_total  # Currently same as real
-        
-        wins = [t for t in closed_trades if t.gross_pnl > 0]
-        losses = [t for t in closed_trades if t.gross_pnl <= 0]
-        
-        win_rate = Decimal(len(wins)) / Decimal(len(closed_trades)) * 100
-        
-        gross_win = sum(t.gross_pnl for t in wins)
-        gross_loss = abs(sum(t.gross_pnl for t in losses))
-        
-        profit_factor = gross_win / gross_loss if gross_loss > 0 else Decimal("999") # Inf
-        
-        # Max Drawdown from snapshots
-        max_dd = max(s.drawdown for s in self.snapshots) if self.snapshots else Decimal("0")
-        
-        # Expectancy based on Trading PnL (F-CALC-100/ICD-CALC-020)
-        avg_win = gross_win / len(wins) if wins else Decimal(0)
-        avg_loss = gross_loss / len(losses) if losses else Decimal(0)
-        # (WinRate% * AvgWin) - (LossRate% * AvgLoss) -> Normalized to 1.0 rate
-        rate_dec = win_rate / 100
-        expectancy = (rate_dec * avg_win) - ((1 - rate_dec) * avg_loss)
-        
-        # NEW: F-CALC-130 - Trade statistics
-        open_pos_count = len(fifo.get_open_positions_snapshot())
-        
-        return PerformanceMetrics(
-            total_realized_pnl=total_pnl,
-            total_fees=total_fees,
-            win_rate=win_rate,
-            profit_factor=profit_factor,
-            max_drawdown=max_dd,
-            expectancy=expectancy,
-            pnl_breakdown=PnLBreakdown(
-                trading_pnl=trading_pnl_total,
-                real_pnl=real_pnl_total,
-                accounting_pnl=accounting_pnl_total
-            ),
-            total_closed_trades=len(closed_trades),
-            total_open_positions=open_pos_count,
-            total_transactions=self.transaction_count
-        )
+        return (win_rate * avg_win) - ((1 - win_rate) * avg_loss)

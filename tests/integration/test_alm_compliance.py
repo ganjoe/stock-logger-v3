@@ -123,9 +123,9 @@ class TestALMCompliance(unittest.TestCase):
         </TradeLog>"""
         root = self.run_workflow(xml_input)
         pos2 = root.find(".//Change[@id='t2']//Position")
-        # -10 total fees for 10 units = -1 per unit.
-        # Remaining 5 units = -5.00 fees.
-        self.assertEqual(pos2.find("AccumulatedFees").text, "-5.00")
+        # -10 total fees for 10 units = 1 per unit.
+        # Remaining 5 units = 5.00 fees.
+        self.assertEqual(pos2.find("AccumulatedFees").text, "5.00")
 
     # -------------------------------------------------------------------------
     # F-CALC-050: PnL Metrics
@@ -211,6 +211,91 @@ class TestALMCompliance(unittest.TestCase):
         self.assertEqual(total_trades_t3.find("ClosedTrades").text, "1")
         self.assertEqual(total_trades_t3.find("OpenPositions").text, "1")
         self.assertEqual(total_trades_t3.find("Transactions").text, "3")
+
+
+    # -------------------------------------------------------------------------
+    # F-LOGIC-010: LIFO Matching
+    # -------------------------------------------------------------------------
+    def test_lifo_matching_logic(self):
+        # Buy 1: 10 @ 100
+        # Buy 2: 10 @ 110
+        # Sell: 10 @ 115
+        # LIFO: Matches Buy 2 (Cost 1100). Gross PnL = (115-110)*10 = 50.
+        # FIFO (Legacy): Would match Buy 1 (Cost 1000). Gross PnL = (115-100)*10 = 150.
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="LIFO"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>L</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t2" isin="LIFO"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>L</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>110</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t3" isin="LIFO"><Meta><Date>03.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>L</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-10</Quantity><Price>115</Price><Commission>0</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
+        </TradeLog>"""
+        root = self.run_workflow(xml_input)
+        
+        perf = root.find(".//Change[@id='t3']//Performance")
+        trading_pnl = perf.find("Trading").text
+        
+        self.assertEqual(trading_pnl, "50.00", "LIFO mismatch: PnL should be 50 (from 110 entry), not 150 (from 100 entry)")
+
+    # -------------------------------------------------------------------------
+    # F-LOGIC-026: Dividend Inflows
+    # -------------------------------------------------------------------------
+    def test_dividends_as_inflows(self):
+        xml_input = """<TradeLog>
+          <Trades></Trades>
+          <DepositsWithdrawals>
+             <Transaction id="d1"><Date>01.01.2026</Date><Desc>Dep</Desc><Amount>1000</Amount><Currency>EUR</Currency></Transaction>
+          </DepositsWithdrawals>
+          <Dividends>
+             <Dividend id="div1" date="02.01.2026" symbol="S" amount="50" currency="EUR" isin="S1"/>
+          </Dividends>
+        </TradeLog>"""
+        root = self.run_workflow(xml_input)
+        
+        # After Dividend
+        snap = root.find(".//Change[@id='div1']//Snapshot")
+        inflows = snap.find("Inflows").text
+        
+        # 1000 Deposit + 50 Dividend = 1050 Total Inflows
+        self.assertEqual(inflows, "1050.00", "Dividends should be counted as Inflows")
+        
+        # Accounting PnL should also increase (it's profit)
+        acc_pnl = snap.find("Performance/Accounting").text
+        self.assertEqual(acc_pnl, "50.00", "Dividends should contribute to Accounting PnL")
+
+    # -------------------------------------------------------------------------
+    # F-CALC-070: Invested = Market Value
+    # -------------------------------------------------------------------------
+    def test_invested_is_market_value(self):
+        # Invested should be Exposure (Price * Qty), NOT Cost Basis.
+        # Scenario: Buy 10 @ 100 (Cost 1000). Price goes to 200. Invested should be 2000.
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="MKT"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>M</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals><Transaction id="d1"><Date>01.01.2026</Date><Amount>5000</Amount><Currency>EUR</Currency></Transaction></DepositsWithdrawals>
+          <Dividends></Dividends>
+        </TradeLog>"""
+        
+        # Override Mock to return Price 200 on later date
+        # We need to simulate price update. The Workflow runs linear.
+        # But MockMarketData is configured in setup. We can dynamically change it if we mock correctly.
+        # Or better: The test runs workflow once.
+        # BUT: The workflow calls get_market_price for each event.
+        # The mock returns constant 0.00 from setup.
+        # Let's adjust Mock behavior for this specific test inside the test function using side_effect?
+        # But 'main' is imported. The mock in setUp patches 'py_portfolio_history.portfolio_history.MarketDataManager'.
+        
+        # We need a predictable mock.
+        self.MockMarketData.return_value.get_market_price.side_effect = lambda isin, sym, date: Decimal("200") if isin=="MKT" else Decimal("100")
+        
+        root = self.run_workflow(xml_input)
+        
+        snap = root.find(".//Change[@id='t1']//Snapshot")
+        invested = snap.find("Invested").text
+        
+        # 10 units * 200 Price = 2000 Invested
+        self.assertEqual(invested, "2000.00", "Invested should be Market Value (Exposure)")
 
 if __name__ == '__main__':
     unittest.main()
