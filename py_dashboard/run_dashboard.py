@@ -10,9 +10,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+import os
+
                     # --- Load CSS ---
 def local_css(file_name):
-    with open(file_name) as f:
+    # Construct absolute path relative to this script
+    script_dir = os.path.dirname(__file__)
+    file_path = os.path.join(script_dir, file_name)
+    with open(file_path) as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 local_css("styles.css")
