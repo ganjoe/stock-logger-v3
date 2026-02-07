@@ -1,0 +1,19 @@
+ID,Category,Title,Description,Covered By
+F-PM-010,Input,Transaktionsquelle,Das Skript muss die Transaktionsdaten aus der Datei 'trades.xml' lesen können.,-
+F-PM-020,Logic,Offene Positionen,Das Skript muss aus den Transaktionen die aktuell offenen Positionen ermitteln (Netto-Position ≠ 0).,-
+F-PM-030,Logic,Positions-Richtung,Das Skript muss Long- und Short-Positionen korrekt unterscheiden und anzeigen.,-
+F-PM-040,Logic,Durchschnittspreis,Der gewichtete Durchschnitts-Einstiegspreis muss für jede offene Position berechnet werden.,-
+F-PM-050,Persistence,Risikodaten laden,Das Skript muss vorhandene Risikodaten aus 'manual_risk_data.json' laden.,-
+F-PM-060,Persistence,Risikodaten speichern,Das Skript muss aktualisierte Risikodaten in 'manual_risk_data.json' speichern.,-
+F-PM-070,UX,Nur fehlende abfragen,"Bei Option 'Neu' darf nur für Positionen ohne hinterlegte Risikodaten nach dem Stop-Loss gefragt werden.",-
+F-PM-080,UX,Überspringen erlauben,Der Benutzer muss die Möglichkeit haben eine Position zu überspringen ('skip').,-
+F-PM-090,Calculation,Initial Risk,"Das Initial Risk muss berechnet werden als |Entry - StopLoss| × Quantity.",-
+F-PM-100,Calculation,Richtungsabhängig,Die Berechnung muss Long (Stop < Entry) und Short (Stop > Entry) korrekt berücksichtigen.,-
+F-PM-110,Data,Positions-Key,Jede Position muss eindeutig über Symbol + Entry Date identifizierbar sein.,-
+F-PM-115,Data,Trade-ID speichern,Zu jeder Position müssen die zugehörigen Trade-IDs (aller offenen Tranchen) mitgespeichert werden.,-
+F-PM-120,Output,Bestätigung,Nach dem Speichern muss eine Bestätigung mit dem Dateipfad ausgegeben werden.,-
+F-PM-130,UX,Interaktives Menü,"Das Skript muss ein Menü mit Optionen bieten: Neu, Bearbeiten, Liste, Löschen, Beenden.",-
+F-PM-140,UX,Liste mit Status,"Die Listenansicht muss alle offenen Positionen anzeigen (mit und ohne Stop-Loss) und den Status (OK, Trail, Missing).",-
+F-PM-150,UX,Bearbeiten,"Der Benutzer muss bestehende Stop-Loss-Werte bearbeiten können.",-
+F-PM-160,UX,Löschen,Der Benutzer muss Einträge löschen können.,-
+F-PM-170,Validation,Stop-Loss Warnung,"Bei unlogischen Stop-Loss-Werten (z.B. Stop > Entry für Long) muss eine Warnung angezeigt werden mit Option zum Überschreiben.",-

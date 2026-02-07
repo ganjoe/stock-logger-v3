@@ -1,0 +1,152 @@
+{
+  "TMDX_2025-10-23": {
+    "symbol": "TMDX",
+    "direction": "LONG",
+    "entry_date": "2025-10-23",
+    "avg_entry": 128.64,
+    "stop_loss": 126.96,
+    "quantity": 2.0,
+    "initial_risk": 3.36,
+    "currency": "USD"
+  },
+  "TDW_2025-10-23": {
+    "symbol": "TDW",
+    "direction": "LONG",
+    "entry_date": "2025-10-23",
+    "avg_entry": 51.510000000000005,
+    "stop_loss": 59.99,
+    "quantity": 5.0,
+    "initial_risk": 42.4,
+    "currency": "USD"
+  },
+  "LMND_2026-01-23": {
+    "symbol": "LMND",
+    "direction": "LONG",
+    "entry_date": "2026-01-23",
+    "avg_entry": 92.58,
+    "stop_loss": 67.48,
+    "quantity": 3.0,
+    "initial_risk": 75.3,
+    "currency": "USD"
+  },
+  "QBTS_2025-11-13": {
+    "symbol": "QBTS",
+    "direction": "SHORT",
+    "entry_date": "2025-11-13",
+    "avg_entry": 24.732,
+    "stop_loss": 22.27,
+    "quantity": 10.0,
+    "initial_risk": 24.62,
+    "currency": "USD"
+  },
+  "CTKB_2025-11-14": {
+    "symbol": "CTKB",
+    "direction": "LONG",
+    "entry_date": "2025-11-14",
+    "avg_entry": 5.65,
+    "stop_loss": 4.4,
+    "quantity": 50.0,
+    "initial_risk": 62.5,
+    "currency": "USD"
+  },
+  "MRK_2025-11-24": {
+    "symbol": "MRK",
+    "direction": "LONG",
+    "entry_date": "2025-11-24",
+    "avg_entry": 100.86,
+    "stop_loss": 112.0,
+    "quantity": 10.0,
+    "initial_risk": 111.4,
+    "currency": "USD"
+  },
+  "MU_2026-01-22": {
+    "symbol": "MU",
+    "direction": "LONG",
+    "entry_date": "2026-01-22",
+    "avg_entry": 389.24,
+    "stop_loss": 356.3,
+    "quantity": 2.0,
+    "initial_risk": 65.88,
+    "currency": "USD"
+  },
+  "BMY_2026-01-08": {
+    "symbol": "BMY",
+    "direction": "LONG",
+    "entry_date": "2026-01-08",
+    "avg_entry": 55.86,
+    "stop_loss": 56.74,
+    "quantity": 10.0,
+    "initial_risk": 8.8,
+    "currency": "USD"
+  },
+  "RKLB_2026-01-12": {
+    "symbol": "RKLB",
+    "direction": "LONG",
+    "entry_date": "2026-01-12",
+    "avg_entry": 89.5842857142857,
+    "stop_loss": 63.81,
+    "quantity": 7.0,
+    "initial_risk": 180.42,
+    "currency": "USD"
+  },
+  "INTC_2026-01-20": {
+    "symbol": "INTC",
+    "direction": "LONG",
+    "entry_date": "2026-01-20",
+    "avg_entry": 48.6,
+    "stop_loss": 41.73,
+    "quantity": 10.0,
+    "initial_risk": 68.7,
+    "currency": "USD"
+  },
+  "AVAV_2026-01-20": {
+    "symbol": "AVAV",
+    "direction": "LONG",
+    "entry_date": "2026-01-20",
+    "avg_entry": 331.42,
+    "stop_loss": 225.0,
+    "quantity": 1.0,
+    "initial_risk": 106.42,
+    "currency": "USD"
+  },
+  "BA_2026-01-20": {
+    "symbol": "BA",
+    "direction": "LONG",
+    "entry_date": "2026-01-20",
+    "avg_entry": 248.76,
+    "stop_loss": 233.0,
+    "quantity": 1.0,
+    "initial_risk": 15.76,
+    "currency": "USD"
+  },
+  "FCX_2026-01-20": {
+    "symbol": "FCX",
+    "direction": "LONG",
+    "entry_date": "2026-01-20",
+    "avg_entry": 59.85,
+    "stop_loss": 57.72,
+    "quantity": 10.0,
+    "initial_risk": 21.3,
+    "currency": "USD"
+  },
+  "NVDA_2026-01-22": {
+    "symbol": "NVDA",
+    "direction": "LONG",
+    "entry_date": "2026-01-22",
+    "avg_entry": 185.55,
+    "stop_loss": 170.0,
+    "quantity": 2.0,
+    "initial_risk": 31.1,
+    "currency": "USD"
+  },
+  "TE_2026-01-23": {
+    "symbol": "TE",
+    "direction": "LONG",
+    "entry_date": "2026-01-23",
+    "avg_entry": 9.21,
+    "stop_loss": 7.15,
+    "quantity": 25.0,
+    "initial_risk": 51.5,
+    "currency": "USD"
+  }
+}

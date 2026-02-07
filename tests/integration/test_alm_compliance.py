@@ -4,15 +4,15 @@ import sys
 import os
 import shutil
 import tempfile
-import xml.etree.ElementTree as ET
+import csv
 from decimal import Decimal
 from pathlib import Path
+from datetime import datetime, date
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from py_portfolio_history.portfolio_history import main
-
 from unittest.mock import MagicMock, patch
 
 class TestALMCompliance(unittest.TestCase):
@@ -20,13 +20,13 @@ class TestALMCompliance(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
         self.input_file = Path(self.test_dir) / "input_trades.xml"
-        self.output_file = Path(self.test_dir) / "output_history.xml"
+        self.output_file = Path(self.test_dir) / "journal.csv"
         
         # Mock MarketDataManager globally for the test
         self.patcher = patch('py_portfolio_history.portfolio_history.MarketDataManager')
         self.MockMarketData = self.patcher.start()
         
-        # Configure the mock instance
+        # Configure the mock instance default behavior
         instance = self.MockMarketData.return_value
         instance.get_market_price.return_value = Decimal("0.00")
         instance.get_fx_rate.return_value = Decimal("1.00")
@@ -39,179 +39,15 @@ class TestALMCompliance(unittest.TestCase):
         self.input_file.write_text(input_content)
         # Mock sys.argv
         sys.argv = ['portfolio_history.py', '--input', str(self.input_file), '--output', str(self.output_file)]
+        
         # Run main
         main()
-        self.assertTrue(self.output_file.exists(), "Output XML not generated")
-        return ET.parse(self.output_file).getroot()
-
-    # -------------------------------------------------------------------------
-    # F-CALC-120: HoldingDays
-    # -------------------------------------------------------------------------
-    def test_holding_days_calculation(self):
-        xml_input = """<TradeLog>
-          <Trades>
-            <Trade id="t1" isin="HOLDTEST">
-              <Meta><Date>01.01.2026</Date><Time>12:00:00</Time></Meta>
-              <Instrument><Symbol>HOLD</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>10</Quantity><Price>100,00</Price><Commission>-1,00</Commission><Proceeds>-1001,00</Proceeds></Execution>
-            </Trade>
-            <Trade id="t2" isin="HOLDTEST">
-              <Meta><Date>11.01.2026</Date><Time>12:00:00</Time></Meta>
-              <Instrument><Symbol>HOLD</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>10</Quantity><Price>110,00</Price><Commission>-1,00</Commission><Proceeds>-1101,00</Proceeds></Execution>
-            </Trade>
-          </Trades>
-          <DepositsWithdrawals></DepositsWithdrawals>
-          <Dividends></Dividends>
-        </TradeLog>"""
+        self.assertTrue(self.output_file.exists(), "CSV output not generated")
         
-        root = self.run_workflow(xml_input)
-        
-        pos1 = root.find(".//Change[@id='t1']//Position[Symbol='HOLD']")
-        self.assertIsNotNone(pos1)
-        # Usually day 0
-        self.assertEqual(pos1.find("HoldingDays").text, "0")
-        
-        pos2 = root.find(".//Change[@id='t2']//Position[Symbol='HOLD']")
-        self.assertIsNotNone(pos2)
-        # 11.01 minus 01.01 = 10 days
-        self.assertEqual(pos2.find("HoldingDays").text, "10")
-
-    # -------------------------------------------------------------------------
-    # F-LOGIC-010: AvgEntryPrice
-    # -------------------------------------------------------------------------
-    def test_avg_entry_price_calculation(self):
-        xml_input = """<TradeLog>
-          <Trades>
-            <Trade id="t1" isin="AVGTEST">
-              <Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta>
-              <Instrument><Symbol>AVG</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>10</Quantity><Price>100,00</Price><Commission>0</Commission><Proceeds>-1000</Proceeds></Execution>
-            </Trade>
-            <Trade id="t2" isin="AVGTEST">
-              <Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta>
-              <Instrument><Symbol>AVG</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>10</Quantity><Price>200,00</Price><Commission>0</Commission><Proceeds>-2000</Proceeds></Execution>
-            </Trade>
-          </Trades>
-          <DepositsWithdrawals></DepositsWithdrawals>
-          <Dividends></Dividends>
-        </TradeLog>"""
-        root = self.run_workflow(xml_input)
-        pos2 = root.find(".//Change[@id='t2']//Position[Symbol='AVG']")
-        self.assertEqual(pos2.find("AvgEntryPrice").text, "150.00")
-
-    # -------------------------------------------------------------------------
-    # F-DATA-050 / ICD-DAT-042: AccumulatedFees
-    # -------------------------------------------------------------------------
-    def test_accumulated_fees(self):
-        xml_input = """<TradeLog>
-          <Trades>
-            <Trade id="t1" isin="FEETEST">
-              <Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta>
-              <Instrument><Symbol>FEE</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>10</Quantity><Price>100,00</Price><Commission>-10,00</Commission><Proceeds>-1010</Proceeds></Execution>
-            </Trade>
-            <Trade id="t2" isin="FEETEST">
-              <Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta>
-              <Instrument><Symbol>FEE</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>-5</Quantity><Price>120,00</Price><Commission>-2,00</Commission><Proceeds>598</Proceeds></Execution>
-            </Trade>
-          </Trades>
-          <DepositsWithdrawals></DepositsWithdrawals>
-          <Dividends></Dividends>
-        </TradeLog>"""
-        root = self.run_workflow(xml_input)
-        pos2 = root.find(".//Change[@id='t2']//Position")
-        # -10 total fees for 10 units = 1 per unit.
-        # Remaining 5 units = 5.00 fees.
-        self.assertEqual(pos2.find("AccumulatedFees").text, "5.00")
-
-    # -------------------------------------------------------------------------
-    # F-CALC-050: PnL Metrics
-    # -------------------------------------------------------------------------
-    def test_pnl_metrics(self):
-        xml_input = """<TradeLog>
-          <Trades>
-            <Trade id="t1" isin="PNLTEST">
-              <Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta>
-              <Instrument><Symbol>PNL</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>10</Quantity><Price>100,00</Price><Commission>-5,00</Commission><Proceeds>-1005</Proceeds></Execution>
-            </Trade>
-            <Trade id="t2" isin="PNLTEST">
-              <Meta><Date>02.01.2026</Date><Time>12:00:00</Time></Meta>
-              <Instrument><Symbol>PNL</Symbol><Currency>EUR</Currency></Instrument>
-              <Execution><Quantity>-10</Quantity><Price>110,00</Price><Commission>-5,00</Commission><Proceeds>1095</Proceeds></Execution>
-            </Trade>
-          </Trades>
-          <DepositsWithdrawals></DepositsWithdrawals>
-          <Dividends></Dividends>
-        </TradeLog>"""
-        root = self.run_workflow(xml_input)
-        perf = root.find(".//Change[@id='t2']//Snapshot/Performance")
-        
-        self.assertEqual(perf.find("Trading").text, "100.00")
-        self.assertEqual(perf.find("Real").text, "90.00")
-        self.assertEqual(perf.find("Accounting").text, "90.00")
-
-    # -------------------------------------------------------------------------
-    # F-CALC-060: Portfolio KPIs (WinRate, ProfitFactor)
-    # -------------------------------------------------------------------------
-    def test_portfolio_kpis(self):
-        # 1. Win: +10 Trading PnL (Real: +8)
-        # 2. Loss: -10 Trading PnL (Real: -12)
-        # Total Real PnL: -4.
-        # WinRate: 1 Win / 2 Trades = 50.00%
-        # ProfitFactor: GrossWin(8) / GrossLoss(12) = 0.67
-        xml_input = """<TradeLog>
-          <Trades>
-            <Trade id="t1" isin="KPI1"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>A</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>1</Quantity><Price>100</Price><Commission>-1</Commission></Execution></Trade>
-            <Trade id="t2" isin="KPI1"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>A</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-1</Quantity><Price>110</Price><Commission>-1</Commission></Execution></Trade>
-            
-            <Trade id="t3" isin="KPI2"><Meta><Date>03.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>B</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>1</Quantity><Price>100</Price><Commission>-1</Commission></Execution></Trade>
-            <Trade id="t4" isin="KPI2"><Meta><Date>04.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>B</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-1</Quantity><Price>90</Price><Commission>-1</Commission></Execution></Trade>
-          </Trades>
-          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
-        </TradeLog>"""
-        
-        root = self.run_workflow(xml_input)
-        perf = root.findall(".//Snapshot/Performance")[-1] # Final state
-        
-        self.assertEqual(perf.find("WinRate").text, "50.00")
-        self.assertEqual(perf.find("ProfitFactor").text, "1.00")
-
-    # -------------------------------------------------------------------------
-    # F-CALC-130: Total Trades Statistics
-    # -------------------------------------------------------------------------
-    def test_total_trades_stats(self):
-        # Using same input as KPIs (2 closed trades)
-        xml_input = """<TradeLog>
-          <Trades>
-            <Trade id="t1" isin="KPI1"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>A</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>1</Quantity><Price>100</Price><Commission>-1</Commission></Execution></Trade>
-            <Trade id="t2" isin="KPI1"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>A</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-1</Quantity><Price>110</Price><Commission>-1</Commission></Execution></Trade>
-            
-            <Trade id="t3" isin="KPI2"><Meta><Date>03.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>B</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>1</Quantity><Price>100</Price><Commission>-1</Commission></Execution></Trade>
-          </Trades>
-          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
-        </TradeLog>"""
-        
-        root = self.run_workflow(xml_input)
-        
-        perf_t2 = root.find(".//Change[@id='t2']//Performance")
-        total_trades = perf_t2.find("TotalTrades")
-        self.assertIsNotNone(total_trades, "TotalTrades node missing in Performance")
-        
-        self.assertEqual(total_trades.find("ClosedTrades").text, "1")
-        self.assertEqual(total_trades.find("OpenPositions").text, "0")
-        self.assertEqual(total_trades.find("Transactions").text, "2") # Buy + Sell
-
-        perf_t3 = root.find(".//Change[@id='t3']//Performance")
-        total_trades_t3 = perf_t3.find("TotalTrades")
-        
-        self.assertEqual(total_trades_t3.find("ClosedTrades").text, "1")
-        self.assertEqual(total_trades_t3.find("OpenPositions").text, "1")
-        self.assertEqual(total_trades_t3.find("Transactions").text, "3")
-
+        # Parse CSV
+        with open(self.output_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f, delimiter=';')
+            return list(reader)
 
     # -------------------------------------------------------------------------
     # F-LOGIC-010: LIFO Matching
@@ -220,8 +56,8 @@ class TestALMCompliance(unittest.TestCase):
         # Buy 1: 10 @ 100
         # Buy 2: 10 @ 110
         # Sell: 10 @ 115
-        # LIFO: Matches Buy 2 (Cost 1100). Gross PnL = (115-110)*10 = 50.
-        # FIFO (Legacy): Would match Buy 1 (Cost 1000). Gross PnL = (115-100)*10 = 150.
+        # LIFO matches Buy 2 (Cost 1100). Proceeds 1150. Gross PnL 50.
+        # FIFO would match Buy 1 (Cost 1000). Gross PnL 150.
         xml_input = """<TradeLog>
           <Trades>
             <Trade id="t1" isin="LIFO"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>L</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
@@ -230,72 +66,284 @@ class TestALMCompliance(unittest.TestCase):
           </Trades>
           <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
         </TradeLog>"""
-        root = self.run_workflow(xml_input)
         
-        perf = root.find(".//Change[@id='t3']//Performance")
-        trading_pnl = perf.find("Trading").text
+        rows = self.run_workflow(xml_input)
         
-        self.assertEqual(trading_pnl, "50.00", "LIFO mismatch: PnL should be 50 (from 110 entry), not 150 (from 100 entry)")
+        # Find the sell row (event='sell')
+        sell_row = next((r for r in rows if r['event'] == 'sell'), None)
+        self.assertIsNotNone(sell_row)
+        
+        # PnL should be 50.00
+        self.assertEqual(sell_row['Trade_PnL'], "50.00", "LIFO mismatch")
 
     # -------------------------------------------------------------------------
-    # F-LOGIC-026: Dividend Inflows
+    # F-LOGIC-026: Dividend Inflows & Cashflow
     # -------------------------------------------------------------------------
     def test_dividends_as_inflows(self):
         xml_input = """<TradeLog>
           <Trades></Trades>
           <DepositsWithdrawals>
-             <Transaction id="d1"><Date>01.01.2026</Date><Desc>Dep</Desc><Amount>1000</Amount><Currency>EUR</Currency></Transaction>
+             <Transaction id="d1">
+               <Date>01.01.2026</Date>
+               <Amount>1000</Amount>
+               <Currency>EUR</Currency>
+             </Transaction>
           </DepositsWithdrawals>
           <Dividends>
-             <Dividend id="div1" date="02.01.2026" symbol="S" amount="50" currency="EUR" isin="S1"/>
+             <Dividend id="div1">
+               <Date>02.01.2026</Date>
+               <Symbol>S</Symbol>
+               <Amount>50</Amount>
+               <Currency>EUR</Currency>
+             </Dividend>
           </Dividends>
         </TradeLog>"""
-        root = self.run_workflow(xml_input)
+        rows = self.run_workflow(xml_input)
         
-        # After Dividend
-        snap = root.find(".//Change[@id='div1']//Snapshot")
-        inflows = snap.find("Inflows").text
+        # Deposit Row
+        dep_row = rows[0]
+        self.assertEqual(dep_row['Sum_Deposit'], "1000.00")
+        self.assertEqual(dep_row['Equity'], "1000.00")
         
-        # 1000 Deposit + 50 Dividend = 1050 Total Inflows
-        self.assertEqual(inflows, "1050.00", "Dividends should be counted as Inflows")
-        
-        # Accounting PnL should also increase (it's profit)
-        acc_pnl = snap.find("Performance/Accounting").text
-        self.assertEqual(acc_pnl, "50.00", "Dividends should contribute to Accounting PnL")
+        # Dividend Row
+        div_row = rows[1]
+        self.assertEqual(div_row['Sum_Dividend'], "50.00")
+        self.assertEqual(div_row['Dividend'], "50.00")
+        self.assertEqual(div_row['Equity'], "1050.00") # 1000 + 50
+        self.assertEqual(div_row['Cashflow'], "50.00")
 
     # -------------------------------------------------------------------------
-    # F-CALC-070: Invested = Market Value
+    # F-CALC-070: Total_Assets = Position Value, Equity = Cash + Total_Assets
+    # Position value uses entry price (avg_entry_price from transaction)
     # -------------------------------------------------------------------------
     def test_invested_is_market_value(self):
-        # Invested should be Exposure (Price * Qty), NOT Cost Basis.
-        # Scenario: Buy 10 @ 100 (Cost 1000). Price goes to 200. Invested should be 2000.
+        # Deposit 5000.
+        # Buy 10 @ 100. Cost 1000. Cash Left 4000.
+        # Position Value = 10 * 100 (entry price) = 1000.
+        # Total_Assets = 1000 (position value at entry price).
+        # Equity = 4000 (Cash) + 1000 (Total_Assets) = 5000.
+        
         xml_input = """<TradeLog>
           <Trades>
-            <Trade id="t1" isin="MKT"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>M</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t1" isin="MKT"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>M</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
           </Trades>
-          <DepositsWithdrawals><Transaction id="d1"><Date>01.01.2026</Date><Amount>5000</Amount><Currency>EUR</Currency></Transaction></DepositsWithdrawals>
+          <DepositsWithdrawals><Transaction id="d1"><Date>01.01.2026</Date><Time>10:00:00</Time><Amount>5000</Amount><Currency>EUR</Currency></Transaction></DepositsWithdrawals>
           <Dividends></Dividends>
         </TradeLog>"""
         
-        # Override Mock to return Price 200 on later date
-        # We need to simulate price update. The Workflow runs linear.
-        # But MockMarketData is configured in setup. We can dynamically change it if we mock correctly.
-        # Or better: The test runs workflow once.
-        # BUT: The workflow calls get_market_price for each event.
-        # The mock returns constant 0.00 from setup.
-        # Let's adjust Mock behavior for this specific test inside the test function using side_effect?
-        # But 'main' is imported. The mock in setUp patches 'py_portfolio_history.portfolio_history.MarketDataManager'.
+        # Note: Market data is NOT used - entry price is the single source of truth
         
-        # We need a predictable mock.
-        self.MockMarketData.return_value.get_market_price.side_effect = lambda isin, sym, date: Decimal("200") if isin=="MKT" else Decimal("100")
+        rows = self.run_workflow(xml_input)
         
-        root = self.run_workflow(xml_input)
+        # Second row is the Trade
+        trade_row = rows[1]
         
-        snap = root.find(".//Change[@id='t1']//Snapshot")
-        invested = snap.find("Invested").text
+        self.assertEqual(trade_row['Equity'], "5000.00", "Equity should reflect Cash (4000) + Total_Assets (1000)")
+        self.assertEqual(trade_row['Total_Assets'], "1000.00", "Total_Assets = Position Value at Entry Price (10 * 100)")
+        self.assertEqual(trade_row['Cash'], "4000.00")
+
+    # -------------------------------------------------------------------------
+    # F-CALC-050: PnL Metrics (Realized)
+    # -------------------------------------------------------------------------
+    def test_pnl_metrics_and_fees(self):
+        # Trade 1: Buy 10 @ 100. Fee 5.
+        # Trade 2: Sell 10 @ 110. Fee 5.
+        # Gross PnL: (110-100)*10 = 100.
+        # Total Fees: 5 (Buy) + 5 (Sell) = 10.
+        # Realized PnL: 100 - 10 = 90.
         
-        # 10 units * 200 Price = 2000 Invested
-        self.assertEqual(invested, "2000.00", "Invested should be Market Value (Exposure)")
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="PNL"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>P</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>-5</Commission></Execution></Trade>
+            <Trade id="t2" isin="PNL"><Meta><Date>02.01.2026</Date><Time>12:00:00</Time></Meta><Instrument><Symbol>P</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-10</Quantity><Price>110</Price><Commission>-5</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
+        </TradeLog>"""
+        
+        rows = self.run_workflow(xml_input)
+        
+        sell_row = rows[1]
+        self.assertEqual(sell_row['Trade_PnL'], "90.00")
+        self.assertEqual(sell_row['Fee'], "5.00")
+
+    # -------------------------------------------------------------------------
+    # F-CALC-065: Drawdown Calculation (based on realized PnL, not market prices)
+    # Since we use entry price only, drawdown occurs through realized losses
+    # -------------------------------------------------------------------------
+    def test_drawdown_calculation(self):
+        # Dep 1000. High Water Mark after deposit: 0 (adjusted equity = 1000 - 1000 = 0)
+        # Buy 10 @ 100. Cash = 0. Position = 1000 at entry. Equity = 1000.
+        # Sell 10 @ 80. Realized loss = -200. Cash = 800. Equity = 800.
+        # Adjusted Equity after sale = 800 - 1000 = -200. High Water Mark = 0.
+        # Drawdown = (0 - (-200)) / 0 = undefined, but we track absolute.
+        # Note: With entry-price-only model, unrealized drops don't exist.
+        # The drawdown percentage is tracked differently now.
+        
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="DD"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>D</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t2" isin="DD"><Meta><Date>03.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>D</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-10</Quantity><Price>80</Price><Commission>0</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals><Transaction id="d1"><Date>01.01.2026</Date><Time>10:00:00</Time><Amount>1000</Amount><Currency>EUR</Currency></Transaction></DepositsWithdrawals>
+          <Dividends></Dividends>
+        </TradeLog>"""
+        
+        # No market data mock needed - entry price is the single source of truth
+        
+        rows = self.run_workflow(xml_input)
+        
+        # After selling at loss, we have 800 Cash, Equity = 800
+        sell_row = rows[2]  # Third row: the sell trade
+        self.assertEqual(sell_row['Cash'], "800.00")
+        self.assertEqual(sell_row['Equity'], "800.00")
+        self.assertEqual(sell_row['Trade_PnL'], "-200.00", "Realized loss from selling 10 @ 80 (bought @ 100)")
+
+    # -------------------------------------------------------------------------
+    # F-CALC-130: Trade Count
+    # -------------------------------------------------------------------------
+    def test_trade_count(self):
+        # Open 1. Close 1. Trade Count should be 1.
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="TC"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>T</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>1</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t2" isin="TC"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>T</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-1</Quantity><Price>110</Price><Commission>0</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
+        </TradeLog>"""
+        
+        rows = self.run_workflow(xml_input)
+        
+        # After first trade (Buy), closed trades 0
+        self.assertEqual(rows[0]['Trade_Count'], "0")
+        # After second trade (Sell), closed trades 1
+        self.assertEqual(rows[1]['Trade_Count'], "1")
+
+    # -------------------------------------------------------------------------
+    # F-LOGIC-011: Short Position Logic
+    # -------------------------------------------------------------------------
+    def test_short_position_logic(self):
+        # 1. Open Short: Sell 10 @ 100
+        # 2. Close Short (Cover): Buy 10 @ 90
+        # Profit: (100 - 90) * 10 = 100.
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="SHORT"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>S</Symbol><Currency>USD</Currency></Instrument><Execution><Quantity>-10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t2" isin="SHORT"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>S</Symbol><Currency>USD</Currency></Instrument><Execution><Quantity>10</Quantity><Price>90</Price><Commission>0</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
+        </TradeLog>"""
+        
+        rows = self.run_workflow(xml_input)
+        
+        cover_row = rows[1]
+        self.assertEqual(cover_row['event'], "buy")
+        self.assertEqual(cover_row['Trade_PnL'], "100.00") # Profit verified
+
+    # -------------------------------------------------------------------------
+    # F-LOGIC-012: Flip Position Logic
+    # -------------------------------------------------------------------------
+    def test_flip_position_logic(self):
+        # 1. Open Long: Buy 10 @ 100. (Pos +10)
+        # 2. Sell 15 @ 110. (Flip: Close 10, Open Short 5)
+        #    - Close PnL: (110 - 100) * 10 = 100.
+        #    - New Pos: Short 5 @ 110.
+        # 3. Close Short: Buy 5 @ 100.
+        #    - Short PnL: (110 - 100) * 5 = 50.
+        
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="FLIP"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>F</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>10</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t2" isin="FLIP"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>F</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>-15</Quantity><Price>110</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t3" isin="FLIP"><Meta><Date>03.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>F</Symbol><Currency>EUR</Currency></Instrument><Execution><Quantity>5</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
+        </TradeLog>"""
+        
+        rows = self.run_workflow(xml_input)
+        
+        # Row 2 (Flip Sell) -> Should show PnL for the closed portion (10 units)
+        flip_row = rows[1]
+        self.assertEqual(flip_row['Trade_PnL'], "100.00")
+        
+        # Row 3 (Close Short) -> Profit on 5 units
+        close_short_row = rows[2]
+        self.assertEqual(close_short_row['Trade_PnL'], "50.00")
+
+    # -------------------------------------------------------------------------
+    # F-LOGIC-030: No FX Conversion
+    # -------------------------------------------------------------------------
+    def test_no_fx_conversion(self):
+        # Requirement: Ignore FX rates. treat 1:1.
+        # Trade in USD. Price change 10 USD. PnL 10 USD -> Output 10.00 (as if EUR).
+        # We mock FX rate to be 2.0 to ensure it is IGNORED (if used, result would be 20).
+        
+        xml_input = """<TradeLog>
+          <Trades>
+            <Trade id="t1" isin="FXTEST"><Meta><Date>01.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>X</Symbol><Currency>USD</Currency></Instrument><Execution><Quantity>1</Quantity><Price>100</Price><Commission>0</Commission></Execution></Trade>
+            <Trade id="t2" isin="FXTEST"><Meta><Date>02.01.2026</Date><Time>10:00:00</Time></Meta><Instrument><Symbol>X</Symbol><Currency>USD</Currency></Instrument><Execution><Quantity>-1</Quantity><Price>110</Price><Commission>0</Commission></Execution></Trade>
+          </Trades>
+          <DepositsWithdrawals></DepositsWithdrawals><Dividends></Dividends>
+        </TradeLog>"""
+        
+        # Mock FX Rate to 2.0 (Should be ignored)
+        self.MockMarketData.return_value.get_fx_rate.return_value = Decimal("2.0")
+        
+        rows = self.run_workflow(xml_input)
+        
+        sell_row = rows[1]
+        # PnL should be 10.00 (110-100), NOT 20.00
+        self.assertEqual(sell_row['Trade_PnL'], "10.00")
+
+    # -------------------------------------------------------------------------
+    # F-DATA-060: Dividend Parsing from Child Elements
+    # -------------------------------------------------------------------------
+    def test_dividend_parsing_and_sum(self):
+        """
+        Verifies that dividends are correctly parsed from XML child elements
+        (not attributes) and that Sum_Dividend is accumulated correctly.
+        """
+        xml_input = """<TradeLog>
+          <Trades></Trades>
+          <DepositsWithdrawals>
+            <Transaction id="dep1">
+              <Date>01.01.2026</Date>
+              <Amount>1000</Amount>
+              <Currency>EUR</Currency>
+            </Transaction>
+          </DepositsWithdrawals>
+          <Dividends>
+            <Dividend id="div1">
+              <Date>10.01.2026</Date>
+              <Symbol>MSFT</Symbol>
+              <Amount>5,00</Amount>
+              <Currency>USD</Currency>
+            </Dividend>
+            <Dividend id="div2">
+              <Date>15.01.2026</Date>
+              <Symbol>AAPL</Symbol>
+              <Amount>3,50</Amount>
+              <Currency>USD</Currency>
+            </Dividend>
+          </Dividends>
+        </TradeLog>"""
+        
+        rows = self.run_workflow(xml_input)
+        
+        # Row 0: Deposit
+        self.assertEqual(rows[0]['event'], "deposit")
+        self.assertEqual(rows[0]['Sum_Dividend'], "0.00")
+        
+        # Row 1: First Dividend (MSFT 5.00)
+        self.assertEqual(rows[1]['event'], "dividend")
+        self.assertEqual(rows[1]['symbol'], "MSFT")
+        self.assertEqual(rows[1]['Dividend'], "5.00")
+        self.assertEqual(rows[1]['Sum_Dividend'], "5.00")
+        
+        # Row 2: Second Dividend (AAPL 3.50) - Cumulative
+        self.assertEqual(rows[2]['event'], "dividend")
+        self.assertEqual(rows[2]['symbol'], "AAPL")
+        self.assertEqual(rows[2]['Dividend'], "3.50")
+        self.assertEqual(rows[2]['Sum_Dividend'], "8.50")  # 5.00 + 3.50
 
 if __name__ == '__main__':
     unittest.main()

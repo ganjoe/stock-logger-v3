@@ -153,20 +153,32 @@ class XmlInputParser:
             if section is None: return []
             
             for d in section.findall("Dividend"):
-                date_val = self._parse_date(d.get("date"))
+                # Read from child elements, not attributes
+                date_elem = d.find("Date")
+                date_str = date_elem.text if date_elem is not None else "01.01.1970"
+                date_val = self._parse_date(date_str)
                 full_date = datetime.combine(date_val, time(0,0,0))
+                
+                symbol_elem = d.find("Symbol")
+                symbol = symbol_elem.text if symbol_elem is not None else ""
+                
+                amount_elem = d.find("Amount")
+                amount = self._parse_decimal(amount_elem.text) if amount_elem is not None else Decimal("0")
+                
+                currency_elem = d.find("Currency")
+                currency = currency_elem.text if currency_elem is not None else "EUR"
                 
                 events.append(Transaction(
                     id=d.get("id", "unk"),
                     date=full_date,
                     type="DIVIDEND",
-                    symbol=d.get("symbol", ""),
+                    symbol=symbol,
                     isin=d.get("isin", ""),
-                    quantity=self._parse_decimal(d.get("amount")), # Amount in Qty
+                    quantity=amount,
                     price=Decimal("1.0"),
                     commission=Decimal("0"),
-                    currency=d.get("currency", "EUR")
+                    currency=currency
                 ))
-        except:
-             pass
+        except Exception as e:
+            logging.error(f"Error parsing dividends: {e}")
         return events

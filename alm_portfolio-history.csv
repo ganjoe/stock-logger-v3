@@ -1,30 +1,24 @@
 ID,Category,Title,Description,Covered By
-F-OUT-020,Output,Interface Definition,Die Generierung der Ausgabedatei muss strikt der Definition in 'icd_portfolio-history.csv' folgen.,icd_portfolio-history.csv
+F-OUT-020,Output,Interface Definition,Die Generierung der Ausgabedatei muss strikt der Definition in 'icd_portfolio-history.csv' (CSV Format) folgen.,icd_portfolio-history.csv
 F-XML-010,XML,Input Interface,Der Parser muss die Input-Datei gemäß der Definition in 'icd_trades.csv' verarbeiten (Root <TradeLog>).,icd_trades.csv
-F-XML-020,XML,Event Types,"Der Parser unterscheidet <Trades>, <Deposits..>. Transaktions-Typ (Buy/Sell) wird aus dem Vorzeichen von <Quantity> abgeleitet (Positiv=Buy, Negativ=Sell).",-
-F-DATA-010,Data,Source Formats,"Der Parser muss deutsche Zahlenformate (Komma als Dezimaltrenner) und Datumsformate ('DD.MM.YYYY') im Input erkennen und normalisieren. Tausendertrennzeichen (Punkt) sind NICHT erlaubt. Gültige Beispiele: '100', '100,00', '1234,56'. Ungültig: '1.234,56', '100.00'.",-
-F-DATA-020,Data,ISIN Source,Die ISIN wird aus dem Attribut 'isin' des <Trade> Tags gelesen. Falls fehlend, Default "".,-
-F-DATA-030,Data,OHLC Source,"OHLC-Daten müssen im Cache (./data/market/) vorhanden sein. Fehlen diese, muss der Mechanismus F-DATA-035 ausgelöst werden. Mit den OHLC-Daten werden die Kurse für die Bewertung der Positionen im Portfolio-Snapshot ermittelt.",ICD-DF-GEN-010;ICD-DF-JSN-010
-F-DATA-035,Data,Lazy Fetching,"Bei Cache-Miss Trigger 'datafetcher.py'. Optimierung: Liegt das Datum im bereits geladenen Zeitraum (<= last_update) und fehlt trotzdem, wird KEIN Fetch ausgelöst (Wochenende/Feiertag).",ICD-DF-CLI-020
-F-DATA-036,Data,Failed Fetch Deduplication,"Fehlgeschlagene Fetches werden in-memory gespeichert. Sobald ein Ticker (z.B. XDEF) einmal fehlschlägt, wird er NIEMALS WIEDER versucht - auch nicht für andere Datumswerte. Alle fehlgeschlagenen Fetches werden in 'log_market_data.txt' mit Zeitstempel und Vermerk '(ticker X blocked)' protokolliert.",-
-F-DATA-040,Data,StopLoss Source (Future),StopLoss wird (aktuell) nicht im Input geliefert. Default-Wert ist 0.00. Reserviert für zukünftiges Feature.,-
-F-DATA-050,Data,Fees Source,Kommissionen kommen aus dem Tag <Commission> und werden als negative Werte (Kosten) interpretiert.,-
-F-LOGIC-010,Logic,Trade Matching,Es gilt LIFO-Matching (Last-In-First-Out) für Long (Sell schließt letzten Buy) und Short (Buy schließt letzten Sell). Teilausführungen werden unterstützt.,-
-F-LOGIC-020,Logic,Cash Flows,Transfers (Ein-/Auszahlungen) verändern Cash Balance und Inflows, generieren aber kein Trading PnL.,-
-F-LOGIC-025,Logic,Dividenden,Dividenden erhöhen Cash Balance und TotalEquity. Sie werden im Accounting PnL berücksichtigt (nicht Trading PnL).,icd_trades.csv (ICD-CP-DIV-010);icd_portfolio-history.csv
-F-LOGIC-026,Logic,Dividend Inflow,Dividenden werden als positive Inflows behandelt und erhöhen die 'inflows (sum)' Metrik im Performance-Snapshot.,-
-F-LOGIC-030,Logic,FX Data Retrieval,Für die Umrechnung in Base-Currency (EUR) werden historische Wechselkurse aus dem Cache herangezogen.,ICD-DF-JSN-030
-F-CALC-050,Metrics,PnL Calculation,"Berechnung von 3 PnL-Typen: Trading (Brutto: Kursdiff * Qty, vor Gebühren), Real (Netto: Trading - Gebühren), Accounting (Real + FX-Gewinne).",-
-F-CALC-060,Metrics,Portfolio KPIs,Berechnung von kumulativen KPIs: WinRate, ProfitFactor (basierend auf Trading PnL) und TotalEquity Kurve.,-
-F-CALC-065,Metrics,Drawdown,Berechnung des Drawdown basierend auf 'Adjusted Equity' (Total Equity bereinigt um Net Inflows).,-
-F-CALC-070,Metrics,Snapshot State,"Für jedes Event muss ein vollständiger Portfoliostatus berechnet werden. Das Feld 'Invested' entspricht hierbei dem aktuellen Marktwert (Exposure) der offenen Positionen.",-
-F-CALC-100,Metrics,Expectancy,Der Erwartungswert pro Trade in Währung ((WinRate * AvgWin) - (LossRate * AvgLoss)).,-
-F-CALC-120,Metrics,Position Holding Time,Berechnung der Haltedauer (Holding Time) für jede Position in Tagen.,-
-F-CALC-130,Metrics,Total Trades Statistics,"Im <Performance> Block wird ein neuer Node <TotalTrades> hinzugefügt mit Sub-Elementen: <ClosedTrades> (Anzahl vollständig geschlossener Positionen), <OpenPositions> (Anzahl aktuell offener Positionen), <Transactions> (Anzahl aller Buy + Sell Transaktionen).",-
-F-CALC-140,Metrics,Cumulative States,"Metriken wie 'Trading (PNL)', 'fees' und 'inflows (sum)' müssen über die gesamte Historie hinweg kumulativ berechnet werden.",-
-F-CALC-150,Metrics,Position Cost Average,Der 'einkaufspreis' im Positions-Snapshot muss als gleitender Durchschnitt (Weighted Average) aller offenen Tranchen einer ISIN berechnet werden.,-
-F-DEP-010,Dependencies,Datafetcher Interface,"Bei Cache-Miss ruft das Modul 'py_datafetcher' auf via CLI gemäß ICD-DF-CLI-010. Argumente: --mode update --assets 'ISIN:TICKER:DATE'.",ICD-DF-CLI-010;ICD-DF-CLI-020
-F-OUT-030,Output (Open),OHLC per Snapshot,"Gemäß ICD-DAT-041 soll <MarketValue> im Snapshot ein <OHLC> Element enthalten (Open/High/Low/Close des Tages). NICHT IMPLEMENTIERT.",ICD-DAT-041
-F-OUT-040,Output (Open),OHLC per Position,"Gemäß ICD-DAT-042 soll jede <Position> ein <OHLC> Element mit Tageskursen enthalten. NICHT IMPLEMENTIERT.",ICD-DAT-042
-F-OUT-050,Output (Open),Instrument Name,"Gemäß ICD-DAT-010 soll <Change> ein <Name> Element mit dem vollständigen Instrumentennamen enthalten. NICHT IMPLEMENTIERT.",ICD-DAT-010
-F-OUT-060,Output (Open),Ticker Element,"Gemäß ICD-DAT-010 soll <Change> ein <Ticker> Element enthalten (ggf. abweichend von Symbol). NICHT IMPLEMENTIERT.",ICD-DAT-010
+F-XML-020,XML,Event Types,Der Parser unterscheidet Trades und Cash Flows. Transaktions-Typ wird aus Vorzeichen von Quantity abgeleitet.,-
+F-DATA-010,Data,Source Formats,Deutsche Zahlenformate (Komma) und Datumsformate im Input.,-
+F-DATA-020,Data,ISIN Source,Die ISIN wird aus dem Input-Attribut 'isin' gelesen.,-
+F-DATA-030,Data,Price Source,"Der Transaktionspreis aus der Broker-CSV (avg_entry_price) ist die einzige Wahrheitsquelle für Positionsbewertung. Keine externen Marktdaten werden verwendet.",-
+F-DATA-035,Data,No Market Data,"Auf Transaktionsebene werden keine Live-Marktdaten abgerufen. Dies garantiert deterministische und reproduzierbare Ergebnisse.",-
+F-DATA-040,Data,StopLoss Source,StopLoss Default 0.00.,-
+F-DATA-050,Data,Fees Source,"Kommissionen werden als 'Fee' behandelt.",-
+F-LOGIC-010,Logic,Trade Matching,Es gilt LIFO-Matching (Last-In-First-Out).,-
+F-LOGIC-011,Logic,Position Direction,"System unterstützt Long (positive Menge) und Short (negative Menge) Positionen.",-
+F-LOGIC-012,Logic,Position Flip,"Ein Trade, der eine Position schließt und die Menge übersteigt, eröffnet automatisch eine neue Position in Gegenrichtung (Flip).",-
+F-LOGIC-020,Logic,Cash Flows,Ein-/Auszahlungen verändern Inflows und Cash.,-
+F-LOGIC-025,Logic,Dividenden,Dividenden erhöhen Cash und Equity.,-
+F-LOGIC-030,Logic,No FX Conversion,Keine Währungsumrechnung für PnL. Native Werte werden 1:1 verwendet.,-
+F-CALC-050,Metrics,PnL Calculation,"Berechnung von Realized PnL (Netto). Long: (Exit-Entry), Short: (Entry-Exit).",-
+F-CALC-060,Metrics,Portfolio KPIs,"Berechnung von WinRate, ProfitFactor (intern/Datenbasis für Dashboard).",-
+F-CALC-065,Metrics,Drawdown,"Drawdown = Adjusted_Equity - High Water Mark. Adjusted_Equity = Equity - Inflows. Ein-/Auszahlungen beeinflussen den Drawdown nicht.",-
+F-CALC-070,Metrics,Snapshot State,"Equity = Cash + Total_Assets. Total_Assets = Summe aller offenen Positionen bewertet zum Entry-Preis (avg_entry_price). Unrealized PnL = 0 (da Current = Entry).",-
+F-CALC-130,Metrics,Total Trades Statistics,Output von Trade_Count.,-
+F-CALC-140,Metrics,Cumulative States,Output von Sum_Deposit/Dividend/Withdrawal.,-
+F-LOGIC-040,Logic,Short Selling Collateral,"Proceeds from opening short positions (Selling without ownership) must be held in a separate 'Collateral' account and NOT treated as free Cash. Collateral is released upon closing the position.",
+F-LOGIC-050,Logic,Multi-Ticker Resolution,"The system must natively resolve multiple ticker symbols (e.g. '4GLD, 4GLDd') mapping to the same ISIN within the input file. The first symbol is treated as primary.",

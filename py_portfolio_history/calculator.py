@@ -26,6 +26,7 @@ class PortfolioCalculator:
         
         # State
         self.cash_balance_eur: Decimal = Decimal("0")
+        self.collateral_balance_eur: Decimal = Decimal("0") # Short Sale Proceeds
         self.inflows_total: Decimal = Decimal("0") # Deposits + Dividends (F-LOGIC-026)
         
         # Positions State: Symbol -> Position Object
@@ -47,15 +48,16 @@ class PortfolioCalculator:
         self.high_water_mark: Decimal = Decimal("0")
 
     def _convert_to_eur(self, amount: Decimal, currency: str, query_date: date) -> Decimal:
-        if currency == "EUR": return amount
-        rate = self.market_data.get_fx_rate(currency, "EUR", query_date)
-        return amount * rate
+        # User Requirement: Ignore FX conversions. Treat all amounts as 1:1.
+        return amount
+        # if currency == "EUR": return amount
+        # rate = self.market_data.get_fx_rate(currency, "EUR", query_date)
+        # return amount * rate
 
     def process_transaction(self, t: Transaction) -> PortfolioSnapshot:
         """
         Main entry point for any event. Dispatch based on type.
         """
-        # We assume t.type is a string from parser constant
         t_type = t.type.upper()
         
         snap = None
@@ -65,8 +67,7 @@ class PortfolioCalculator:
         elif t_type in ["DEPOSIT", "WITHDRAWAL"]:
             snap = self._process_cash(t)
         elif t_type == "DIVIDEND":
-            # XML Parser might call it DIVIDEND, but TransactionType enum might be different
-            # We'll stick to string handling for safety as types.py uses strings
+            # Treat as dividend
             snap = self._process_dividend(t)
         else:
             logging.warning(f"Unknown transaction type: {t_type}")
@@ -76,246 +77,256 @@ class PortfolioCalculator:
 
     def _process_trade(self, t: Transaction) -> PortfolioSnapshot:
         self.transaction_count += 1
-        date_obj = t.date.date()
         
-        # 1. Update Cash (Immediate Fee impact + Principal)
-        # Note: Fees are distinct. Principal is Price * Qty.
-        # Fees are usually Commission field.
+        # Cash Update Update:
+        # We delegrate Cash/Collateral updates to the Position Logic (Init/Add/Reduce)
+        # to correctly handle Short Proceeds vs Free Cash.
         
-        total_value = t.price * t.quantity
-        total_value_eur = self._convert_to_eur(total_value, t.currency, date_obj)
-        fees_eur = self._convert_to_eur(t.commission, t.currency, date_obj)
+        fees = t.commission
+        self.cum_fees += fees
         
-        # Update Cumulative Fees
-        self.cum_fees += fees_eur
+        # Position Logic (Long/Short/Flip)
+        self._update_position_logic(t)
         
-        if t.type == "BUY":
-            # Cash outflow: Principal + Fees
-            self.cash_balance_eur -= (total_value_eur + fees_eur)
-            
-            # Add Position Logic
-            self._handle_buy(t)
-            
-        elif t.type == "SELL":
-            # Cash inflow: Principal - Fees
-            self.cash_balance_eur += (total_value_eur - fees_eur)
-            
-            # Match Logic (LIFO)
-            self._handle_sell_lifo(t)
-
         return self._create_snapshot(t.date)
 
-    def _handle_buy(self, t: Transaction):
+    def _update_position_logic(self, t: Transaction):
         symbol = t.symbol
+        side = 1 if t.type == "BUY" else -1
+        qty_remaining = t.quantity
         
+        # Ensure position exists via Init if needed
         if symbol not in self.open_positions:
-            self.open_positions[symbol] = Position(
-                symbol=symbol,
-                isin=t.isin,
-                quantity=Decimal("0"),
-                avg_entry_price=Decimal("0"),
-                current_price=t.price,
-                market_value=Decimal("0"),
-                accumulated_fees=Decimal("0"),
-                realized_pnl=Decimal("0"),
-                unrealized_pnl=Decimal("0"),
-                holding_days=0,
-                currency=t.currency,
-                exchange_rate=Decimal("1.0"),
-                tranches=[]
-            )
-            
+             self._init_position(t, side, qty_remaining)
+             return
+             
         pos = self.open_positions[symbol]
+        pos_side = 1 if pos.quantity >= 0 else -1
         
-        # Add Tranche
-        tranche = Tranche(
-            id=t.id,
-            date=t.date,
-            quantity=t.quantity,
-            price=t.price,
-            commission=t.commission,
+        # Verify valid existing position state
+        if pos.quantity == 0: pos_side = side 
+        
+        if side == pos_side:
+            # Same direction: Adding to position
+            self._add_tranche(pos, t, side, qty_remaining)
+        else:
+            # Opposite direction: Reducing or Flipping
+            self._reduce_position(pos, t, side, qty_remaining)
+
+    def _init_position(self, t: Transaction, side: int, qty: Decimal):
+        val = qty * t.price
+        fees = t.commission
+        
+        # Cash/Collateral Logic
+        if side == -1: # Opening Short
+            self.collateral_balance_eur += val
+            self.cash_balance_eur -= fees
+        else: # Opening Long
+            self.cash_balance_eur -= (val + fees)
+
+        s_qty = qty * side
+        pos = Position(
+            symbol=t.symbol,
             isin=t.isin,
-            currency=t.currency
+            quantity=s_qty,
+            avg_entry_price=t.price,
+            current_price=t.price,
+            market_value=Decimal("0"), # Calculated in snapshot
+            accumulated_fees=t.commission,
+            realized_pnl=Decimal("0"),
+            unrealized_pnl=Decimal("0"),
+            holding_days=0,
+            currency=t.currency,
+            exchange_rate=Decimal("1.0"),
+            tranches=[]
         )
-        pos.tranches.append(tranche)
-        
-        # Update Position Aggregates
-        pos.quantity += t.quantity
+        self.open_positions[t.symbol] = pos
+        # Add Tranche (Tranche quantity usually absolute)
+        # We assume Tranche Qty is ABSOLUTE exposure. Position Sign determines direction.
+        tr = Tranche(t.id, t.date, qty, t.price, t.commission, t.isin, t.currency)
+        pos.tranches.append(tr)
+
+    def _add_tranche(self, pos: Position, t: Transaction, side: int, qty: Decimal):
+        # Cash/Collateral Logic
+        val = qty * t.price
+        fees = t.commission
+        if side == -1: # Increasing Short
+            self.collateral_balance_eur += val
+            self.cash_balance_eur -= fees
+        else: # Increasing Long
+             self.cash_balance_eur -= (val + fees)
+
+        # Update Pos
+        pos.quantity += (qty * side)
         pos.accumulated_fees += t.commission
         
-        # Weighted Average Entry Price update
-        total_cost = sum(tr.quantity * tr.price for tr in pos.tranches)
-        if pos.quantity > 0:
-            pos.avg_entry_price = total_cost / pos.quantity
+        # Tranche
+        tr = Tranche(t.id, t.date, qty, t.price, t.commission, t.isin, t.currency)
+        pos.tranches.append(tr)
+        
+        # Recalc Avg Price
+        self._recalc_avg_price(pos)
 
-    def _handle_sell_lifo(self, t: Transaction):
-        symbol = t.symbol
-        remaining_qty = t.quantity
+    def _reduce_position(self, pos: Position, t: Transaction, side: int, qty: Decimal):
+        qty_to_process = qty
         
-        if symbol not in self.open_positions:
-            # Short Sell logic or Error?
-            # Assuming Long Only for now, or just logging warning
-            logging.warning(f"SELL without position for {symbol}. Ignoring matching logic.")
-            return
-
-        pos = self.open_positions[symbol]
+        # Identify Position Direction: 1 (Long) or -1 (Short)
+        pos_side = 1 if pos.quantity > 0 else -1
         
-        # LIFO Matching: Iterate from end
-        # We use a while loop popping from end or index access
-        
-        generated_closed_trades = []
-        
-        while remaining_qty > 0 and pos.tranches:
-            # Last In First Out
-            tranche = pos.tranches[-1] # Peek last
+        while qty_to_process > 0 and pos.tranches:
+            tranche = pos.tranches[-1] # LIFO
+            match_qty = min(qty_to_process, tranche.quantity)
             
-            match_qty = min(remaining_qty, tranche.quantity)
+            # PnL Calculation
+            # Long Closing (Sell, Side -1): Profit if Price > Entry. (Price - Entry) * match_qty.
+            # Short Closing (Buy, Side 1): Profit if Entry > Price. (Entry - Price) * match_qty.
+            # Combined Formula: (t.price - tranche.price) * pos_side * match_qty
             
-            # Calculate PnL for this match
-            # Fees Allocation: 
-            # Buy Fee Portion = TrancheFee * (MatchQty / TrancheOriginalQty?) 
-            # Problem: We modified Tranche Qty in place. We should track original qty or unit fee?
-            # Simplification: Unit Fee = TrancheComm / TrancheQty
-            unit_buy_fee = tranche.commission / tranche.quantity if tranche.quantity > 0 else 0
-            buy_fee_part = unit_buy_fee * match_qty
+            gross_pnl = (t.price - tranche.price) * match_qty * pos_side
             
-            # Sell Fee Portion = SellComm * (MatchQty / TotalSellQty)
-            sell_fee_part = t.commission * (match_qty / t.quantity) if t.quantity > 0 else 0
+            # Proportional Fees
+            buy_fee = (tranche.commission / tranche.quantity) * match_qty if tranche.quantity > 0 else 0
+            sell_fee = (t.commission / t.quantity) * match_qty if t.quantity > 0 else 0
+            total_fees = buy_fee + sell_fee
             
-            gross_pnl = (t.price - tranche.price) * match_qty
-            total_fees = buy_fee_part + sell_fee_part
             real_pnl = gross_pnl - total_fees
             
-            # --- CURRENCY CONVERSION FOR PNL ---
-            # PnL values are in trade currency. Need to convert to EUR for cumulative tracking?
-            # Yes, standardizing on EUR for accounting.
-            date_obj = t.date.date()
-            gross_pnl_eur = self._convert_to_eur(gross_pnl, t.currency, date_obj)
-            real_pnl_eur = self._convert_to_eur(real_pnl, t.currency, date_obj)
+            # Cash/Collateral Logic for this chunk
+            # Current (Closing) Fee Portion:
+            closing_fee_part = sell_fee # The fee from 't' (the closer)
             
-            # Update Cumulative Stats
-            self.cum_trading_pnl += gross_pnl_eur
-            self.cum_realized_pnl += real_pnl_eur
-            # Accounting PnL = Real PnL (in EUR)
-            self.cum_accounting_pnl += real_pnl_eur 
+            self.cash_balance_eur -= closing_fee_part
             
-            # Create ClosedTrade Record
+            if pos_side == 1:
+                # Closing Long (Sell)
+                proceeds = t.price * match_qty
+                self.cash_balance_eur += proceeds
+            else:
+                # Closing Short (Buy/Cover)
+                cost = t.price * match_qty
+                collateral_release = tranche.price * match_qty
+                
+                self.collateral_balance_eur -= collateral_release
+                # Net Cash Flow = Collateral Releaase - Cost (to buy back)
+                self.cash_balance_eur += (collateral_release - cost)
+            
+            # Metrics (Ignore FX)
+            self.cum_trading_pnl += gross_pnl
+            self.cum_realized_pnl += real_pnl
+            self.cum_accounting_pnl += real_pnl
+            
+            # Create Closed Trade
+            # For Short: Entry = Tranche (Sell), Exit = t (Buy).
+            # For Long: Entry = Tranche (Buy), Exit = t (Sell).
             closed = ClosedTrade(
-                entry_id=tranche.id,
-                exit_id=t.id,
-                symbol=symbol,
-                quantity=match_qty,
-                entry_date=tranche.date,
-                exit_date=t.date,
-                entry_price=tranche.price,
-                exit_price=t.price,
-                gross_pnl=gross_pnl_eur, # Storing in EUR for consistency? Or Native?
-                # Types.py doesn't specify currency. Let's start storing EUR to match aggregations.
-                fees=self._convert_to_eur(total_fees, t.currency, date_obj),
-                real_pnl=real_pnl_eur,
+                entry_id=tranche.id, exit_id=t.id, symbol=pos.symbol, quantity=match_qty,
+                entry_date=tranche.date, exit_date=t.date,
+                entry_price=tranche.price, exit_price=t.price,
+                gross_pnl=gross_pnl, fees=total_fees, real_pnl=real_pnl,
                 holding_days=(t.date - tranche.date).days,
                 winning_trade=(real_pnl > 0)
             )
             self.closed_trades.append(closed)
             
             # Update Tranche
-            remaining_qty -= match_qty
-            
             if match_qty == tranche.quantity:
-                pos.accumulated_fees -= tranche.commission # Reduce total fees by the tranche's full fee
-                pos.tranches.pop() # Remove fully closed tranche (LIFO pop is efficient)
+                # Fully closed tranche
+                pos.accumulated_fees -= tranche.commission
+                pos.tranches.pop()
             else:
-                # Partial Close
+                # Partial close
                 tranche.quantity -= match_qty
-                tranche.commission -= buy_fee_part # Reduce remaining fee burden
-                pos.accumulated_fees -= buy_fee_part # Update position total fees matches tranche reduction
-        
-        # After matching loop
-        # Update Position Aggregates
-        pos.quantity -= (t.quantity - remaining_qty)
-        # Recalculate Avg Price
-        if pos.quantity > 0:
-             total_cost = sum(tr.quantity * tr.price for tr in pos.tranches)
-             pos.avg_entry_price = total_cost / pos.quantity
-        else:
-            pos.avg_entry_price = Decimal("0")
+                tranche.commission -= buy_fee
+                pos.accumulated_fees -= buy_fee
+                
+            qty_to_process -= match_qty
+            pos.quantity -= (match_qty * pos_side) # Reduce magnitude
             
-        if pos.quantity == 0:
-            del self.open_positions[symbol]
+        self._recalc_avg_price(pos)
+        
+        # Cleanup Empty Position
+        if pos.quantity == 0 and not pos.tranches:
+             if pos.symbol in self.open_positions:
+                del self.open_positions[pos.symbol]
+        
+        # FLIP Logic: If quantity still remains, open new position in opposite direction
+        if qty_to_process > 0:
+            # Check if cleaned up
+            pass # Already deleted above if 0.
+            
+            # Trigger Init for remainder
+            self._init_position(t, side, qty_to_process)
+
+    def _recalc_avg_price(self, pos: Position):
+        if not pos.tranches: 
+            pos.avg_entry_price = Decimal("0")
+            return
+        total_cost = sum(tr.quantity * tr.price for tr in pos.tranches)
+        total_qty = sum(tr.quantity for tr in pos.tranches)
+        if total_qty > 0:
+            pos.avg_entry_price = total_cost / total_qty
 
     def _process_cash(self, t: Transaction) -> PortfolioSnapshot:
-        self.transaction_count += 1 # Is cash a transaction? "Transactions (Buy + Sell)" per requirement likely means Trades.
-        # Req F-CALC-130: "Transactions (Anzahl aller Buy + Sell Transaktionen)."
-        # So maybe NOT cash. But for now let's stick to strict interpretation: Buy+Sell.
-        # Revert increment if strict. But harmless to track. Let's follow req STRICTLY: Buy+Sell only?
-        # "Transactions (Anzahl aller Buy + Sell Transaktionen)" -> Yes.
-        self.transaction_count -= 1 # Undo helper increment if strictly Buy/Sell
+        # F-CALC-130: Transactions count Buy+Sell only.
+        # Strict adherence -> do not increment here.
         
-        amount_eur = self._convert_to_eur(t.quantity, t.currency, t.date.date()) 
-        # Note: In cash events, quantity usually holds amount
+        amount = t.quantity # Absolute
         
         if t.type == "DEPOSIT":
-            self.cash_balance_eur += amount_eur
-            self.inflows_total += amount_eur
+            self.cash_balance_eur += amount
+            self.inflows_total += amount
         elif t.type == "WITHDRAWAL":
-            self.cash_balance_eur -= amount_eur # Amount is usually positive in XML, logic subtracts
-            # Withdrawals reduce Inflows? Or are Flows = In - Out?
-            # Usually Net Flow.
-            self.inflows_total -= amount_eur
+            self.cash_balance_eur -= amount
+            self.inflows_total -= amount
             
         return self._create_snapshot(t.date)
 
     def _process_dividend(self, t: Transaction) -> PortfolioSnapshot:
-        # F-LOGIC-026: Dividends treat as Inflows
-        # Dividends are income.
-        amount_eur = self._convert_to_eur(t.quantity, t.currency, t.date.date()) # Div amount in qty? Or Price?
-        # Usually Div event has amount. Mapping to Transaction struct: quantity = amount?
+        # F-LOGIC-026: Dividends = Inflow + Profit
+        amount = t.quantity
         
-        self.cash_balance_eur += amount_eur
-        self.inflows_total += amount_eur 
-        
-        # Update Accounting PnL (Divs are profit)
-        self.cum_accounting_pnl += amount_eur
+        self.cash_balance_eur += amount
+        self.inflows_total += amount
+        self.cum_accounting_pnl += amount
         
         return self._create_snapshot(t.date)
 
     def _create_snapshot(self, timestamp: datetime) -> PortfolioSnapshot:
-        date_obj = timestamp.date()
-        
-        # Calculate Market Value of Open Positions
-        total_market_value = Decimal("0")
+        total_market_value_signed = Decimal("0")
+        total_exposure = Decimal("0")
         
         for symbol, pos in self.open_positions.items():
-            # Get Price
-            price = self.market_data.get_market_price(pos.isin, symbol, date_obj)
-            fx_rate = self.market_data.get_fx_rate(pos.currency, "EUR", date_obj)
+            # Price: Use avg_entry_price from transaction data (broker CSV)
+            # No market data lookup - transaction price is the single source of truth
+            price = pos.avg_entry_price
             
-            price_eur = price * fx_rate
-            mv_eur = pos.quantity * price_eur
+            # Market Value (Signed)
+            # Long: positive. Short: negative.
+            mv = pos.quantity * price
+            
+            # Exposure (Absolute)
+            exposure = abs(mv)
             
             pos.current_price = price
-            pos.market_value = mv_eur
-            pos.exchange_rate = fx_rate
+            pos.market_value = mv
+            pos.exchange_rate = Decimal("1.0")
             
-            # Calc Unrealized PnL (Market Value - Cost Basis)
-            # Cost Basis = Sum(Tranche.Qty * Tranche.Price) converted to EUR using CURRENT rate or HISTORICAL?
-            # Unrealized is usually: (CurrentPrice - AvgEntry) * Qty * CurrentFX
-            cost_basis_eur = pos.avg_entry_price * pos.quantity * fx_rate 
-            pos.unrealized_pnl = mv_eur - cost_basis_eur
+            # Unrealized PnL: Always 0 when using entry price
+            # (Current = Entry, so no unrealized gain/loss)
+            pos.unrealized_pnl = Decimal("0")
             
-            # Holding Days (First Entry) - F-CALC-120
             if pos.tranches:
                 first_date = min(tr.date for tr in pos.tranches)
                 pos.holding_days = (timestamp - first_date).days
             
-            total_market_value += mv_eur
+            total_market_value_signed += mv
+            total_exposure += exposure
             
-        # Invested = Market Value (F-CALC-070 New Def: Exposure)
-        invested = total_market_value 
+        # Calc Equity
+        # Equity = Cash + Collateral + Signed Market Value
+        total_equity = self.cash_balance_eur + self.collateral_balance_eur + total_market_value_signed
         
-        total_equity = self.cash_balance_eur + total_market_value
-        
-        # HWM
+        # HWM Logic
         adj_equity = total_equity - self.inflows_total
         if adj_equity > self.high_water_mark:
             self.high_water_mark = adj_equity
@@ -324,8 +335,7 @@ class PortfolioCalculator:
         if self.high_water_mark > 0:
              dd = (self.high_water_mark - adj_equity) / self.high_water_mark * 100
              
-        # Metrics Construction
-        # F-CALC-130: Stats
+        # Metrics
         closed_count = len(self.closed_trades)
         open_count = len(self.open_positions)
         
@@ -343,17 +353,14 @@ class PortfolioCalculator:
             total_transactions_count=self.transaction_count
         )
         
-        # Clone positions for snapshot (shallow copy of dict values ok since we replace objects on update?)
-        # Better deep copy strictly, but let's assume one snapshot per event sequence.
-        # To be safe, we create a dict copy.
         import copy
         pos_snapshot = copy.deepcopy(self.open_positions)
 
         return PortfolioSnapshot(
             date=timestamp,
             cash=self.cash_balance_eur,
-            invested=invested,
-            market_value_total=total_market_value,
+            invested=total_exposure, # Use Exposure for Invested field
+            market_value_total=total_market_value_signed,
             total_equity=total_equity,
             inflows=self.inflows_total,
             drawdown=dd,
@@ -374,7 +381,6 @@ class PortfolioCalculator:
 
     def _calc_expectancy(self) -> float:
         if not self.closed_trades: return 0.0
-        # Formula: (WinRate * AvgWin) - (LossRate * AvgLoss)
         wins = [t.gross_pnl for t in self.closed_trades if t.gross_pnl > 0]
         losses = [abs(t.gross_pnl) for t in self.closed_trades if t.gross_pnl <= 0]
         

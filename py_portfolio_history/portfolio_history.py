@@ -6,7 +6,8 @@ from datetime import datetime
 from .market_data import MarketDataManager
 from .xml_parser import XmlInputParser
 from .calculator import PortfolioCalculator, IMarketDataProvider
-from .xml_generator import XmlOutputGenerator
+# from .xml_generator import XmlOutputGenerator # Legacy
+from .csv_generator import CsvOutputGenerator
 from .types import EventWithSnapshot
 
 # Setup Logging
@@ -19,7 +20,7 @@ logging.basicConfig(
 def main():
     parser = argparse.ArgumentParser(description="Portfolio History Analyzer")
     parser.add_argument("--input", default="trades.xml", help="Input XML file (default: trades.xml)")
-    parser.add_argument("--output", default="portfolio-history.xml", help="Output XML file (default: portfolio-history.xml)")
+    parser.add_argument("--output", default="journal.csv", help="Output CSV file (default: journal.csv)")
     args = parser.parse_args()
 
     logging.info("Starting Portfolio History Analysis...")
@@ -29,7 +30,8 @@ def main():
     market_data = MarketDataManager("./data/market")
     xml_parser = XmlInputParser()
     calculator = PortfolioCalculator(market_data)
-    xml_gen = XmlOutputGenerator()
+    # xml_gen = XmlOutputGenerator() 
+    csv_gen = CsvOutputGenerator()
 
     # 2. Parse Input (Unified)
     logging.info(f"Parsing input: {args.input}")
@@ -53,15 +55,14 @@ def main():
         snapshot = calculator.process_transaction(t)
         history_events.append(EventWithSnapshot(t, snapshot))
         
-    # 5. Generate Output
-    logging.info("Generating XML...")
-    xml_str = xml_gen.generate(history_events)
+    # 5. Generate Output (CSV)
+    logging.info(f"Generating CSV: {args.output}")
+    csv_str = csv_gen.generate(history_events)
     
     with open(args.output, "w", encoding='utf-8') as f:
-        f.write(xml_str)
+        f.write(csv_str)
         
-    # Check for failure indications in calculator?
-    # Or just log success.
+    logging.info(f"Done. Output written to {args.output}")
     
     # Final Summary Log
     metrics = calculator.snapshots[-1].performance if calculator.snapshots else None
@@ -69,7 +70,7 @@ def main():
         logging.info(f"Total Transactions: {metrics.total_transactions_count}")
         logging.info(f"Total Realized PnL: {metrics.realized_pnl:.2f} EUR")
     
-    logging.info(f"Done. Output written to {args.output}")
+    logging.info(f"Done.")
 
 if __name__ == "__main__":
     main()

@@ -97,6 +97,8 @@ def process_csv(filepath, existing_ids, ticker_map):
 
     # --- PASS 1: Metadata (Informationen zum Finanzinstrument) ---
     current_section, headers = None, {}
+    token_alias_map = {} # F-295: Map aliases (e.g., 4GLDd -> 4GLD)
+
     for row in all_rows:
         if not row or len(row) < 2: continue
         section_name, row_type = row[0].strip(), row[1].strip()
@@ -108,13 +110,37 @@ def process_csv(filepath, existing_ids, ticker_map):
 
         if row_type == "Data" and current_section == SECTION_INFO:
             try:
-                sym = row[headers["Symbol"]]
-                sym = ticker_map.get(sym, sym)
+                sym_raw = row[headers["Symbol"]]
                 name = row[headers["Beschreibung"]]
                 isin = row[headers["Wertpapier-ID"]]
-                instrument_metadata[sym] = {"name": name, "id": isin}
+                
+                # F-295: Handle multiple symbols like "4GLD, 4GLDd"
+                # The first symbol is considered primary/canonical.
+                symbols = [s.strip() for s in sym_raw.split(",")]
+                primary_sym = symbols[0]
+
+                # Map all subsequent symbols to the primary one
+                for s in symbols:
+                    if s != primary_sym:
+                        token_alias_map[s] = primary_sym
+                
+                # Apply ticker_map to primary symbol if needed
+                mapped_primary = ticker_map.get(primary_sym, primary_sym)
+                
+                # Register metadata for the canonical symbol
+                instrument_metadata[mapped_primary] = {"name": name, "id": isin}
+                
+                # Also ensure original symbols map to this metadata (via alias)
+                for s in symbols:
+                    # If alias exists, the lookup in Pass 2 will resolve to primary_sym -> mapped_primary
+                    # But if we look up by raw 's', we need metadata.
+                    # Actually, Pass 2 should use token_alias_map FIRST.
+                    pass 
+
             except (KeyError, IndexError):
                 continue
+                
+    print(f"-> [F-295] Auto-discovered {len(token_alias_map)} ticker aliases from CSV.")
 
     # --- PASS 2: Transactions (Trades, Divs, Deposits) ---
     current_section, headers = None, {}
@@ -130,14 +156,25 @@ def process_csv(filepath, existing_ids, ticker_map):
         if row_type == "Data" and current_section:
             if current_section == SECTION_INFO: continue
 
-                # --- TRADES ---
             if current_section == SECTION_TRADES:
                 try:
                     sym = row[headers["Symbol"]]
                     original_sym = sym
-                    sym = ticker_map.get(sym, sym)
-                    if original_sym != sym:
-                        print(f"-> [TC-070] Mapped trade: {original_sym} -> {sym}")
+                    
+                    # F-295: Apply native alias map first (4GLDd -> 4GLD)
+                    sym_after_alias = token_alias_map.get(sym, sym)
+                    
+                    # Then apply user ticker map (4GLD -> GOLD.DE or whatever)
+                    final_sym = ticker_map.get(sym_after_alias, sym_after_alias)
+                    
+                    if original_sym != final_sym:
+                         # Verbose logging only for ticker_map changes or significant alias changes
+                         if original_sym != sym_after_alias:
+                              pass # print(f"-> [F-295] Auto-aliased: {original_sym} -> {sym_after_alias}")
+                         if sym_after_alias != final_sym:
+                              print(f"-> [TC-070] Mapped trade: {sym_after_alias} -> {final_sym}")
+
+                    sym = final_sym # Use the canonical symbol
 
                     raw_date = row[headers["Datum/Zeit"]]
                     qty = row[headers["Menge"]]
@@ -168,7 +205,11 @@ def process_csv(filepath, existing_ids, ticker_map):
                     desc = row[headers["Beschreibung"]]
                     sym = extract_symbol_from_desc(desc)
                     original_sym = sym
-                    sym = ticker_map.get(sym, sym)
+                    # F-295: Apply auto-alias then ticker map
+                    sym_alias = token_alias_map.get(sym, sym)
+                    final_sym = ticker_map.get(sym_alias, sym_alias)
+                    sym = final_sym
+
                     if original_sym != sym:
                         print(f"-> [TC-070] Mapped dividend: {original_sym} -> {sym}")
                     
@@ -222,12 +263,15 @@ def update_xml(new_trades, new_divs, new_deposits, instrument_metadata):
     trades_node = root.find("Trades")
     for t in new_trades:
         metadata = instrument_metadata.get(t["symbol"], {})
+        isin = metadata.get("id", "")
+        name = metadata.get("name", "")
+        
         if metadata:
-            print(f"-> [TC-095] Enriching {t['symbol']} with Name: {metadata.get('name')} and ID: {metadata.get('id')}")
+            print(f"-> [TC-095] Enriching {t['symbol']} with Name: {name} and ISIN: {isin}")
             
         t_elem = ET.SubElement(trades_node, "Trade", id=t["id"], 
-                               name=metadata.get("name", ""), 
-                               isin=metadata.get("id", ""))
+                               name=name, 
+                               isin=isin)
         meta = ET.SubElement(t_elem, "Meta")
         ET.SubElement(meta, "Date").text = t["date"]
         ET.SubElement(meta, "Time").text = t["time"]
@@ -277,18 +321,18 @@ def update_xml(new_trades, new_divs, new_deposits, instrument_metadata):
 
 
 def main():
-    print("--- PnL Tracker 2.0 (German Edition v3.5) ---")
+    print("--- PnL Tracker 2.0 (German Edition v3.6) ---")
     
     ticker_map = {}
     if os.path.exists(TICKER_MAP_FILE):
         try:
             with open(TICKER_MAP_FILE, "r") as f:
                 ticker_map = json.load(f)
-            print(f"-> [S-IO-220] Loaded {len(ticker_map)} mappings.")
+            print(f"-> [S-IO-220] Loaded {len(ticker_map)} ticker mappings.")
         except json.JSONDecodeError:
             print(f"-> Warning: Could not parse {TICKER_MAP_FILE}.")
     else:
-        print("-> [TC-080] Ticker map not found.")
+        print("-> [TC-080] Ticker map not found (optional).")
 
     csv_path = get_file_path()
     if not csv_path: return
@@ -309,22 +353,20 @@ def main():
     
     if new_trades or new_divs or new_deposits:
         update_xml(new_trades, new_divs, new_deposits, instrument_metadata)
-        
-        # Move processed file to oldcsv directory
-        old_csv_dir = "oldcsv"
-        if not os.path.exists(old_csv_dir):
-            os.makedirs(old_csv_dir)
-        
-        try:
-            # os.path.basename is important if csv_path includes a path
-            new_path = os.path.join(old_csv_dir, os.path.basename(csv_path))
-            os.rename(csv_path, new_path)
-            print(f"-> [S-IO-100] Moved processed file to {new_path}")
-        except OSError as e:
-            print(f"-> Error moving file: {e}")
-            
     else:
-        print("-> No new data found.")
+        print("-> No new data found (already imported).")
+    
+    # Always move processed file to oldcsv directory (S-IO-100, F-080)
+    old_csv_dir = "oldcsv"
+    if not os.path.exists(old_csv_dir):
+        os.makedirs(old_csv_dir)
+    
+    try:
+        new_path = os.path.join(old_csv_dir, os.path.basename(csv_path))
+        os.rename(csv_path, new_path)
+        print(f"-> [S-IO-100] Moved processed file to {new_path}")
+    except OSError as e:
+        print(f"-> Error moving file: {e}")
 
 if __name__ == "__main__":
     main()
