@@ -1,0 +1,68 @@
+/* Main Dashboard Layout */
+.stApp {
+    background-color: #0e1117;
+    color: #ffffff;
+}
+
+/* Container Cards */
+[data-testid="stVerticalBlock"]>[style*="flex-direction: column;"]>[data-testid="stVerticalBlock"] {
+    background-color: #262730;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Focus Input Specific Styling */
+.focus-container {
+    border: 2px solid #00d4ff;
+    /* Minervini-blueish accent */
+    background-color: #1c2025;
+    padding: 1.5rem;
+    border-radius: 0.8rem;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+.focus-header {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #00d4ff;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Reality Check Tiles */
+.metric-container {
+    background-color: #262730;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    border: 1px solid #41424C;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+.status-green {
+    background-color: rgba(0, 200, 83, 0.2);
+    color: #00c853;
+    border: 1px solid #00c853;
+}
+
+.status-yellow {
+    background-color: rgba(255, 214, 0, 0.2);
+    color: #ffd600;
+    border: 1px solid #ffd600;
+}
+
+.status-red {
+    background-color: rgba(255, 23, 68, 0.2);
+    color: #ff1744;
+    border: 1px solid #ff1744;
+}
