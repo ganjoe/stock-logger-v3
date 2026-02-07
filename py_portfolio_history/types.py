@@ -85,6 +85,7 @@ class PerformanceMetrics:
 class PortfolioSnapshot:
     date: datetime
     cash: Decimal
+    collateral: Decimal
     invested: Decimal # Market Value Exposure
     market_value_total: Decimal
     total_equity: Decimal

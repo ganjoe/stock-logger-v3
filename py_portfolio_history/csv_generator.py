@@ -10,7 +10,8 @@ class CsvOutputGenerator:
         self.fieldnames = [
             'date', 'time', 'Trade_PnL', 'Trade_R', 'Fee', 'Cashflow', 
             'Dividend', 'Equity', 'Cash', 'Total_Assets', 'Drawdown', 
-            'Sum_Deposit', 'Sum_Withdrawal', 'Sum_Dividend', 'Trade_Count', 
+            'Sum_Deposit', 'Sum_Withdrawal', 'Sum_Dividend', 'Sum_Fee', 'Trade_Count', 
+            'Open_Positions', 
             'event', 'symbol', 'quantity', 'price', 
             # Extra columns possibly needed by dashboard filtering
             # 'setup', 'duration'? Data loader doesn't use them explicitly but they might be useful.
@@ -42,6 +43,7 @@ class CsvOutputGenerator:
         sum_deposit = Decimal("0")
         sum_withdrawal = Decimal("0")
         sum_dividend = Decimal("0")
+        sum_fee = Decimal("0")
         
         # High Water Mark Tracking for Drawdown Amount
         hwm = Decimal("-999999999") # Start low or 0? 
@@ -86,7 +88,7 @@ class CsvOutputGenerator:
             
             # --- Total_Assets = Position Value (Equity - Cash) ---
             # Per Dashboard Tooltip: "Liquidationswert aller offenen Positionen (ohne Cash)"
-            total_assets = snap.market_value_total  # This is the signed sum of all position values
+            total_assets = snap.market_value_total + snap.collateral
             
             adj_equity = curr_equity - curr_inflows
             
@@ -98,6 +100,7 @@ class CsvOutputGenerator:
             # --- Fee ---
             # Current transaction fee
             fee = tnx.commission
+            sum_fee += fee
             
             # --- Value to use for Price/Qty ---
             # For charts, maybe useful checking 'price' column behavior
@@ -117,7 +120,9 @@ class CsvOutputGenerator:
                 'Sum_Deposit': self._fmt(sum_deposit),
                 'Sum_Withdrawal': self._fmt(sum_withdrawal),
                 'Sum_Dividend': self._fmt(sum_dividend),
+                'Sum_Fee': self._fmt(sum_fee),
                 'Trade_Count': perf.closed_trades_count,
+                'Open_Positions': str(perf.open_positions_count),
                 'event': t_type.lower(),
                 'symbol': tnx.symbol if tnx.symbol else "",
                 'quantity': self._fmt(tnx.quantity),

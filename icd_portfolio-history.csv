@@ -5,6 +5,6 @@ ICD-COL-010,Columns,Timeline,"'date' (YYYY-MM-DD), 'time' (HH:MM:SS).",-
 ICD-COL-020,Columns,Metrics,"'Trade_PnL' (Realisierter Gewinn/Verlust des Trades), 'Trade_R' (R-Multiple, optional, default 0), 'Fee' (Gebühren der Transaktion).",-
 ICD-COL-030,Columns,Cashflow,"'Cashflow' (Nettobewegung bei Deposit/Withdrawal/Dividend), 'Dividend' (Dividendenbetrag).",-
 ICD-COL-040,Columns,Account State,"'Equity' (Gesamtwert = Cash + Total_Assets), 'Cash' (Barbestand), 'Total_Assets' (Marktwert offener Positionen), 'Drawdown' (Aktueller Drawdown in EUR, negativ).",-
-ICD-COL-050,Columns,Cumulative,"'Sum_Deposit', 'Sum_Withdrawal', 'Sum_Dividend' (Kumulierte Summen).",-
-ICD-COL-060,Columns,Stats,"'Trade_Count' (Anzahl geschlossener Trades).",-
+ICD-COL-050,Columns,Cumulative,"'Sum_Deposit', 'Sum_Withdrawal', 'Sum_Dividend', 'Sum_Fee' (Kumulierte Summen).",-
+ICD-COL-060,Columns,Stats,"'Trade_Count' (Anzahl geschlossener Trades), 'Open_Positions' (Anzahl aktuell offener Positionen).",-
 ICD-COL-070,Columns,Event Details,"'event' (buy, sell, deposit, withdrawal, dividend), 'symbol', 'quantity', 'price'.",-

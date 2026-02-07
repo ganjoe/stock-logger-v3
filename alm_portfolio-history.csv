@@ -11,14 +11,27 @@ F-DATA-050,Data,Fees Source,"Kommissionen werden als 'Fee' behandelt.",-
 F-LOGIC-010,Logic,Trade Matching,Es gilt LIFO-Matching (Last-In-First-Out).,-
 F-LOGIC-011,Logic,Position Direction,"System unterstützt Long (positive Menge) und Short (negative Menge) Positionen.",-
 F-LOGIC-012,Logic,Position Flip,"Ein Trade, der eine Position schließt und die Menge übersteigt, eröffnet automatisch eine neue Position in Gegenrichtung (Flip).",-
-F-LOGIC-020,Logic,Cash Flows,Ein-/Auszahlungen verändern Inflows und Cash.,-
-F-LOGIC-025,Logic,Dividenden,Dividenden erhöhen Cash und Equity.,-
+F-LOGIC-020,Logic,Cash Flows,Ein-/Auszahlungen verändern Inflows und Buying Power.
+F-LOGIC-025,Logic,Dividenden,Dividenden erhöhen Buying Power und Equity.,-
 F-LOGIC-030,Logic,No FX Conversion,Keine Währungsumrechnung für PnL. Native Werte werden 1:1 verwendet.,-
 F-CALC-050,Metrics,PnL Calculation,"Berechnung von Realized PnL (Netto). Long: (Exit-Entry), Short: (Entry-Exit).",-
 F-CALC-060,Metrics,Portfolio KPIs,"Berechnung von WinRate, ProfitFactor (intern/Datenbasis für Dashboard).",-
 F-CALC-065,Metrics,Drawdown,"Drawdown = Adjusted_Equity - High Water Mark. Adjusted_Equity = Equity - Inflows. Ein-/Auszahlungen beeinflussen den Drawdown nicht.",-
-F-CALC-070,Metrics,Snapshot State,"Equity = Cash + Total_Assets. Total_Assets = Summe aller offenen Positionen bewertet zum Entry-Preis (avg_entry_price). Unrealized PnL = 0 (da Current = Entry).",-
+F-CALC-070,Metrics,Snapshot State,"Equity = Buying Power + Invested. Invested = Position Value + Collateral. Unrealized PnL is 0 at snapshot (Entry = Current).",-
 F-CALC-130,Metrics,Total Trades Statistics,Output von Trade_Count.,-
-F-CALC-140,Metrics,Cumulative States,Output von Sum_Deposit/Dividend/Withdrawal.,-
-F-LOGIC-040,Logic,Short Selling Collateral,"Proceeds from opening short positions (Selling without ownership) must be held in a separate 'Collateral' account and NOT treated as free Cash. Collateral is released upon closing the position.",
+F-CALC-140,Metrics,Cumulative States,Output von Sum_Deposit/Dividend/Withdrawal/Sum_Fee.,icd_portfolio-history.csv
+F-CALC-160,Metrics,Open Positions,The system must track the number of currently open positions at each event.,icd_portfolio-history.csv
+F-LOGIC-040,Logic,Short Selling Collateral,"Proceeds from opening short positions (Selling without ownership) must be held in a separate 'Collateral' account and NOT treated as free Buying Power. Collateral is released upon closing the position.",
 F-LOGIC-050,Logic,Multi-Ticker Resolution,"The system must natively resolve multiple ticker symbols (e.g. '4GLD, 4GLDd') mapping to the same ISIN within the input file. The first symbol is treated as primary.",
+F-DASH-010,Dashboard,Net Inflows,"The Total Inflows metric displayed must be the NET deposits (Sum Deposits - Sum Withdrawals).",SPEC-DASH-010
+F-DASH-020,Dashboard,Total Commissions,The dashboard must display the cumulative sum of all commissions (Sum_Fee) in the account summary.,SPEC-DASH-020
+F-DASH-030,Dashboard,Total Trades,The Reality Check section must display the total number of closed trades (based on sell events) for both the All Time and Focus views.,SPEC-DASH-030
+F-DASH-040,Dashboard,PnL/R-Value Visualization,"PnL and R-Value metrics must be displayed as bar charts (columns). The bar width must be clearly visible but not overlapping.",SPEC-DASH-040
+F-DASH-050,Dashboard,Buying Power Display,The dashboard must display Buying Power in the account summary and charts with a detailed explanation of collateral.,SPEC-DASH-070
+SPEC-DASH-010,Specification,Net Inflow Logic,Total Inflows calculated as Sum_Deposit - Sum_Withdrawal.,data_loader.py
+SPEC-DASH-020,Specification,Cumulative Fee Logic,Total Commissions extracted from Sum_Fee column.,data_loader.py
+SPEC-DASH-030,Specification,Trade Count Logic,Total Trades calculated as sum of 'sell' events in data window.,reality_check.py
+SPEC-DASH-040,Specification,Stem Plot Implementation,"PnL and R-Value bars rendered as Scatter lines with 5px width to ensure visibility regardless of zoom.",charts.py
+SPEC-DASH-050,Specification,Dual Axis Visualization,Secondary Y-axis used for PnL overlay in EUR chart to prevent scaling issues.,charts.py
+SPEC-DASH-060,Specification,Positions Rendering,Open Positions Count displayed as an area chart with 'hv' stepping (no interpolation) and 20% transparency in the Efficiency Factor section.,charts.py
+SPEC-DASH-070,Specification,Buying Power Tooltip,"Buying Power Help text must explicitly mention that short proceeds are held as collateral and not available until position closure. Formula: Equity = Buying Power + Invested.",charts.py

@@ -10,7 +10,7 @@ This script:
 5. Saves updated risk data.
 
 Usage:
-    python manage_stoploss.py [--input trades.xml]
+    python run_manage-portfolio.py [--input trades.xml]
 """
 
 import argparse

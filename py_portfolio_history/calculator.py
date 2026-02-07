@@ -359,6 +359,7 @@ class PortfolioCalculator:
         return PortfolioSnapshot(
             date=timestamp,
             cash=self.cash_balance_eur,
+            collateral=self.collateral_balance_eur,
             invested=total_exposure, # Use Exposure for Invested field
             market_value_total=total_market_value_signed,
             total_equity=total_equity,
