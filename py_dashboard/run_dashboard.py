@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-from modules.data_loader import load_data
-from modules.focus_input import render_focus_input
+from data_loader import load_data
+from focus_input import render_focus_input
 
 # --- Page Config ---
 st.set_page_config(
@@ -43,13 +43,13 @@ st.markdown("---")
 st.info(f"Filtered Data: {len(df_focus)} trades selected. Mode: {mode}")
 
 # 2. Reality Check
-from modules.reality_check import render_reality_check
+from reality_check import render_reality_check
 render_reality_check(df, df_focus, account_summary)
 
 # 3. Charts
-from modules.charts import render_charts_section
+from charts import render_charts_section
 render_charts_section(df_focus, mode)
 
 # 4. Heatmap
-from modules.heatmap import render_heatmap
+from heatmap import render_heatmap
 render_heatmap(df)
