@@ -45,7 +45,7 @@ def render_chart_module(df, chart_type, key_prefix, mode):
                 'col': 'Drawdown', 
                 'color': '#ff1744', 
                 'default': False,
-                'help': 'Rückgang vom Höchststand in EUR. Formel: Drawdown = Peak_Equity - Current_Equity'
+                'help': 'Rückgang vom Höchststand in EUR (bereinigt um Ein-/Auszahlungen). Formel: Adjusted_Equity - High Water Mark'
             }
         }
         y_format = "€%{y:,.0f}"
@@ -63,7 +63,7 @@ def render_chart_module(df, chart_type, key_prefix, mode):
                 'col': 'Drawdown_Pct', 
                 'color': '#ff1744', 
                 'default': False,
-                'help': 'Prozentualer Rückgang vom Höchststand. Formel: (Peak_Equity - Current_Equity) / Peak_Equity × 100%'
+                'help': 'Prozentualer Rückgang vom Höchststand (bereinigt um Ein-/Auszahlungen). Formel: Drawdown / High Water Mark × 100%'
             },
             'PnL %': {
                 'col': 'PnL_Pct', 
