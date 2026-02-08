@@ -2,7 +2,7 @@ import yfinance as yf
 from datetime import date, timedelta
 from typing import List, Dict
 import logging
-from .types import IDataProvider, OHLCV, DataFetcherError
+from .data_models import IDataProvider, OHLCV, DataFetcherError
 
 class YahooProvider(IDataProvider):
     def fetch_asset_history(self, ticker: str, start_date: date) -> List[OHLCV]:

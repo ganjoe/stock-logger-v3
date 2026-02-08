@@ -181,7 +181,7 @@ def process_csv(filepath, existing_ids, ticker_map):
                     proceeds = row[headers["Erlös"]]
                     commission = row[headers["Prov./Gebühr"]]
                     
-                    trade_id = generate_hash(f"{raw_date}{sym}{qty}{proceeds}{commission}")
+                    trade_id = generate_hash(f"{raw_date}{original_sym}{qty}{proceeds}{commission}")
                     if trade_id in existing_ids: continue
 
                     date_fmt, time_fmt = parse_date_time(raw_date)
@@ -216,7 +216,7 @@ def process_csv(filepath, existing_ids, ticker_map):
                     raw_date = row[headers["Datum"]]
                     amount = row[headers["Betrag"]]
                     
-                    div_id = generate_hash(f"{raw_date}{sym}{amount}{desc}")
+                    div_id = generate_hash(f"{raw_date}{original_sym}{amount}{desc}")
                     if div_id in existing_ids: continue
 
                     date_fmt, _ = parse_date_time(raw_date)

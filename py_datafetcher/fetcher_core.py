@@ -1,9 +1,19 @@
 import logging
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Dict
-from .types import AppConfig, IDataProvider, AssetData, FxData, DataFetcherError, OHLCV
+from .data_models import AppConfig, IDataProvider, AssetData, FxData, DataFetcherError, OHLCV
 from .cache_manager import CacheManager
 from .error_logger import ErrorLogger
+ 
+logger = logging.getLogger(__name__)
+
+# ANSI Colors for terminal output
+C_GREEN = "\033[92m"
+C_CYAN = "\033[96m"
+C_YELLOW = "\033[93m"
+C_BLUE = "\033[94m"
+C_BOLD = "\033[1m"
+C_RESET = "\033[0m"
 
 class FetcherOrchestrator:
     def __init__(self, config: AppConfig, cache: CacheManager, providers: List[IDataProvider], error_logger: Optional[ErrorLogger] = None):
@@ -27,12 +37,12 @@ class FetcherOrchestrator:
                 dt_obj = datetime.fromisoformat(last_update_str).date()
                 return dt_obj + timedelta(days=1)
             except ValueError:
-                logging.warning(f"Could not parse last_update '{last_update_str}'. Using default.")
+                logger.warning(f"Could not parse last_update '{last_update_str}'. Using default.")
         
         return hint_date if hint_date else self.default_start_date
 
     def update_asset(self, isin: str, ticker: str, start_date_hint: Optional[date] = None) -> bool:
-        logging.info(f"Processing Asset {isin} (Ticker: {ticker})...")
+        logger.info(f"{C_BOLD}{C_BLUE}🔍 Asset: {ticker} ({isin}){C_RESET}")
         
         # 1. Load from Cache
         asset = self.cache.load_asset(isin)
@@ -44,12 +54,12 @@ class FetcherOrchestrator:
             asset = None
 
         if start_date > date.today():
-            logging.info(f"Asset {isin} up to date (Next fetch: {start_date}).")
+            logger.info(f"  {C_GREEN}✅ Up to date{C_RESET} (v{start_date})")
             return True
 
         # 2. Use Ticker provided by arguments
         if not ticker:
-             logging.error(f"No ticker provided for {isin}. Skipping.")
+             logger.error(f"No ticker provided for {isin}. Skipping.")
              if self.error_logger:
                  self.error_logger.log_failure(isin, "UNKNOWN", "No ticker provided")
              return False
@@ -61,18 +71,19 @@ class FetcherOrchestrator:
         fetched_symbol = ticker
         fetched_currency = "EUR" # Default, or we assume from provider
 
+        provider_results = {}
+        has_any_failure = False
+
         # We need at least one provider to work
         for provider in self.providers:
+            p_name = provider.__class__.__name__.replace("Provider", "").upper()
             try:
-                logging.info(f"Fetching {ticker} from {provider.__class__.__name__} starting {start_date}")
+                logger.info(f"  {C_CYAN}📡 Requesting {ticker} via {provider.__class__.__name__}...{C_RESET}")
                 
                 # Fetch History
-                # Optimization: Should we fetch only if start_date < today? Yes.
                 hist_data = provider.fetch_asset_history(ticker, start_date)
                 
                 # Fetch Current Price
-                # If hist_data includes today, we could use that close. 
-                # But fetch_current_price might give real-time.
                 try:
                     curr_price = provider.fetch_current_price(ticker)
                 except:
@@ -85,16 +96,28 @@ class FetcherOrchestrator:
                 new_history = hist_data
                 new_price = curr_price
                 success = True
+                provider_results[p_name] = "OK"
+                logger.info(f"  {C_GREEN}✨ Success: {ticker} | Price: {new_price:.2f} | Datapoints: {len(new_history)}{C_RESET}")
                 break # Success
             except DataFetcherError as e:
-                logging.warning(f"Provider {provider.__class__.__name__} failed: {e}")
+                err_msg = str(e)
+                provider_results[p_name] = err_msg
+                has_any_failure = True
+                logger.warning(f"Provider {provider.__class__.__name__} failed: {e}")
                 continue
             except Exception as e:
-                logging.exception(f"Unexpected error in provider {provider.__class__.__name__}: {e}")
+                err_msg = str(e)
+                provider_results[p_name] = err_msg
+                has_any_failure = True
+                logger.exception(f"Unexpected error in provider {provider.__class__.__name__}: {e}")
                 continue
 
+        # Log to matrix if any provider failed (even if one eventually succeeded)
+        if has_any_failure and self.error_logger:
+            self.error_logger.log_matrix_entry(isin, ticker, provider_results)
+
         if not success:
-            logging.error(f"All providers failed to update {isin}.")
+            logger.error(f"All providers failed to update {isin}.")
             if self.error_logger:
                 self.error_logger.log_failure(isin, ticker, "All providers failed")
             return False
@@ -102,18 +125,17 @@ class FetcherOrchestrator:
         # 4. Merge and Save
         if asset is None:
             # Initialize new
-            # Determine max date from new_history for last_update
             max_date = start_date # Minimum
             hist_dict = {}
             for h in new_history:
                 hist_dict[h.date] = h
                 if h.date > str(max_date):
-                    max_date = h.date # String compare works for ISO dates
+                    max_date = h.date
             
             asset = AssetData(
                 isin=isin,
                 symbol=fetched_symbol,
-                currency=fetched_currency, # TODO: Parse from provider?
+                currency=fetched_currency,
                 market_price=new_price,
                 last_update=str(max_date) if new_history else datetime.now().strftime("%Y-%m-%d"),
                 history=hist_dict
@@ -129,11 +151,10 @@ class FetcherOrchestrator:
                     asset.last_update = h.date
         
         self.cache.save_asset(asset)
-        logging.info(f"Successfully updated {isin}. New last_update: {asset.last_update}")
         return True
 
     def update_fx(self, pair: str, start_date_hint: Optional[date] = None) -> bool:
-        logging.info(f"Processing FX {pair}...")
+        logger.info(f"{C_BOLD}{C_BLUE}🔍 FX Pair: {pair}{C_RESET}")
         fx_data = self.cache.load_fx(pair)
         
         if fx_data:
@@ -146,19 +167,29 @@ class FetcherOrchestrator:
 
         success = False
         new_rates: Dict[str, float] = {}
+        provider_results = {}
+        has_any_failure = False
         
         for provider in self.providers:
+            p_name = provider.__class__.__name__.replace("Provider", "").upper()
             try:
                 data = provider.fetch_fx_history(pair, start_date)
                 if data:
                     new_rates = data
                     success = True
+                    provider_results[p_name] = "OK"
                     break
             except Exception as e:
-                logging.warning(f"Provider failed for FX {pair}: {e}")
+                err_msg = str(e)
+                provider_results[p_name] = err_msg
+                has_any_failure = True
+                logger.warning(f"Provider failed for FX {pair}: {e}")
         
+        if has_any_failure and self.error_logger:
+            self.error_logger.log_matrix_entry("", pair, provider_results)
+
         if not success:
-            logging.error(f"Failed to fetch FX {pair}")
+            logger.error(f"Failed to fetch FX {pair}")
             return False
 
         # Merge
@@ -186,4 +217,5 @@ class FetcherOrchestrator:
                     fx_data.rate = new_rates[latest_date]
 
         self.cache.save_fx(fx_data)
+        logger.info(f"  {C_GREEN}✨ Success: {pair} | Rate: {fx_data.rate:.4f}{C_RESET}")
         return True

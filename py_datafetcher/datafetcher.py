@@ -2,12 +2,8 @@ import argparse
 import sys
 import logging
 from datetime import date
-from py_datafetcher.types import ProviderType
-from py_datafetcher.config_loader import load_config
-from py_datafetcher.cache_manager import CacheManager
-from py_datafetcher.provider_yahoo import YahooProvider
-from py_datafetcher.fetcher_core import FetcherOrchestrator
-from py_datafetcher.error_logger import ErrorLogger
+from py_datafetcher.service import DataFetcherService
+from py_datafetcher.data_models import ProviderType
 
 # Setup Logging
 logging.basicConfig(
@@ -80,24 +76,17 @@ def main():
     parser.add_argument("--mode", required=True, choices=["update"], help="Operation mode")
     parser.add_argument("--assets", help="List of assets 'ISIN:TICKER:STARTDATE,...'")
     parser.add_argument("--fx", help="List of FX pairs 'PAIR:STARTDATE,...'")
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed logging (DEBUG)")
     
     args = parser.parse_args()
     
-    logging.info("Starting DataFetcher...")
+    # We keep the --verbose flag for future use, but don't flood with DEBUG logs 
+    # to avoid yfinance's internal noise.
     
-    # 1. Load Config & Init Components
-    config = load_config()
-    cache = CacheManager(config.market_data_dir)
-    error_logger = ErrorLogger(config.market_data_dir)
+    logging.info("Starting DataFetcher via Service API...")
     
-    providers = []
-    # Instantiate Providers based on Config
-    for p_conf in config.providers:
-        if p_conf.name == ProviderType.YAHOO:
-            providers.append(YahooProvider())
-        # Add other providers here if implemented
-        
-    orchestrator = FetcherOrchestrator(config, cache, providers, error_logger)
+    # Initialize Service
+    service = DataFetcherService()
     
     success_count = 0
     fail_count = 0
@@ -105,25 +94,30 @@ def main():
     # 2. Process Assets
     if args.assets:
         assets_to_fetch = parse_asset_list(args.assets)
-        for isin, ticker, start_date in assets_to_fetch:
-            if orchestrator.update_asset(isin, ticker, start_date):
-                success_count += 1
+        for isin, ticker, _ in assets_to_fetch:
+            # CLI mode implies we want to ensure data is up to date.
+            # We use force_update=True to trigger the update logic (which internally checks if update is actually needed vs today)
+            # Actually, the logic in service.get_asset with force_update=True will trigger orchestrator.update_asset.
+            # orchestrator.update_asset checks "if start_date > date.today(): return True".
+            # So force_update=True here is safe and correct for "Update Mode".
+            asset = service.get_asset(isin, ticker, force_update=True)
+            if asset:
+                 success_count += 1
             else:
-                fail_count += 1
-                
+                 fail_count += 1
+                 
     # 3. Process FX
     if args.fx:
         fx_to_fetch = parse_fx_list(args.fx)
-        for pair, start_date in fx_to_fetch:
-            if orchestrator.update_fx(pair, start_date):
+        for pair, _ in fx_to_fetch:
+            fx_data = service.get_fx(pair, force_update=True)
+            if fx_data:
                 success_count += 1
             else:
                 fail_count += 1
     
     logging.info(f"DataFetcher Finished. Success: {success_count}, Failed: {fail_count}")
     
-    # Return 0 if all good, 1 if some failures? 
-    # Or strict: non-zero if ANY failure.
     if fail_count > 0:
         sys.exit(1)
     sys.exit(0)

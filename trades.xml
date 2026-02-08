@@ -23,7 +23,7 @@
         <Time>03:28:54</Time>
       </Meta>
       <Instrument>
-        <Symbol>XDEF</Symbol>
+        <Symbol>XDEF.DE</Symbol>
         <Currency>EUR</Currency>
       </Instrument>
       <Execution>
@@ -241,6 +241,38 @@
         <Proceeds>-486,00</Proceeds>
       </Execution>
     </Trade>
+    <Trade id="e537342b50c3c15124643e4880d1b265" name="IREN LTD" isin="AU0000185993">
+      <Meta>
+        <Date>04.02.2026</Date>
+        <Time>15:13:28</Time>
+      </Meta>
+      <Instrument>
+        <Symbol>IREN</Symbol>
+        <Currency>USD</Currency>
+      </Instrument>
+      <Execution>
+        <Quantity>5,00</Quantity>
+        <Price>45,33</Price>
+        <Commission>-2,00</Commission>
+        <Proceeds>-226,65</Proceeds>
+      </Execution>
+    </Trade>
+    <Trade id="45fb94df7da6a3e4ec4a7239f4c7f83a" name="JAZZ PHARMACEUTICALS PLC" isin="IE00B4Q5ZN47">
+      <Meta>
+        <Date>05.02.2026</Date>
+        <Time>15:13:44</Time>
+      </Meta>
+      <Instrument>
+        <Symbol>JAZZ</Symbol>
+        <Currency>USD</Currency>
+      </Instrument>
+      <Execution>
+        <Quantity>-1,00</Quantity>
+        <Price>162,64</Price>
+        <Commission>-2,00</Commission>
+        <Proceeds>162,64</Proceeds>
+      </Execution>
+    </Trade>
     <Trade id="5f8e0549063978936f91aa921f78d91a" name="LEMONADE INC" isin="US52567D1072">
       <Meta>
         <Date>22.01.2026</Date>
@@ -401,6 +433,22 @@
         <Proceeds>395,70</Proceeds>
       </Execution>
     </Trade>
+    <Trade id="6201cc0bfcfbe1f3e803dbbf868d0dfc" name="D-WAVE QUANTUM INC" isin="US26740W1099">
+      <Meta>
+        <Date>04.02.2026</Date>
+        <Time>15:55:19</Time>
+      </Meta>
+      <Instrument>
+        <Symbol>QBTS</Symbol>
+        <Currency>USD</Currency>
+      </Instrument>
+      <Execution>
+        <Quantity>-10,00</Quantity>
+        <Price>20,11</Price>
+        <Commission>-2,00</Commission>
+        <Proceeds>201,10</Proceeds>
+      </Execution>
+    </Trade>
     <Trade id="1de6ea65794d2cf4ed0a81efa0f97a11" name="ROCKET LAB CORP" isin="US7731211089">
       <Meta>
         <Date>12.01.2026</Date>
@@ -513,6 +561,22 @@
         <Proceeds>-230,38</Proceeds>
       </Execution>
     </Trade>
+    <Trade id="7c392c8f7f5ffd2264edf0f3b898c8f6" name="USA RARE EARTH INC" isin="US91733P1075">
+      <Meta>
+        <Date>27.01.2026</Date>
+        <Time>15:34:16</Time>
+      </Meta>
+      <Instrument>
+        <Symbol>USAR</Symbol>
+        <Currency>USD</Currency>
+      </Instrument>
+      <Execution>
+        <Quantity>2,00</Quantity>
+        <Price>26,62</Price>
+        <Commission>-2,00</Commission>
+        <Proceeds>-53,24</Proceeds>
+      </Execution>
+    </Trade>
     <Trade id="26b126fd39fd1bad48483fea3b6e15ca" name="WRAP TECHNOLOGIES INC" isin="US98212N1072">
       <Meta>
         <Date>15.01.2026</Date>
@@ -577,7 +641,7 @@
         <Proceeds>347,40</Proceeds>
       </Execution>
     </Trade>
-    <Trade id="ab02156ff9e36c83f7f5a1f0289fd6cd" name="" isin="">
+    <Trade id="bb471b2bcda6d938338c9204e6ee6094" name="XETRA-GOLD" isin="DE000A0S9GB0">
       <Meta>
         <Date>13.10.2025</Date>
         <Time>10:29:34</Time>
@@ -593,7 +657,7 @@
         <Proceeds>-1139,20</Proceeds>
       </Execution>
     </Trade>
-    <Trade id="fb4c5b21582ab227c10de89ae0b83265" name="" isin="">
+    <Trade id="7ed104f6beb3f1d2015afcff0159cc21" name="XETRA-GOLD" isin="DE000A0S9GB0">
       <Meta>
         <Date>17.10.2025</Date>
         <Time>10:03:24</Time>
@@ -609,7 +673,7 @@
         <Proceeds>11704,45</Proceeds>
       </Execution>
     </Trade>
-    <Trade id="cc5c5655d86c14f2b974390bcbd295ea" name="" isin="">
+    <Trade id="f669f1be0fa8cdaf214a6f21a33591a2" name="XETRA-GOLD" isin="DE000A0S9GB0">
       <Meta>
         <Date>20.10.2025</Date>
         <Time>11:13:59</Time>
@@ -625,7 +689,7 @@
         <Proceeds>-10784,70</Proceeds>
       </Execution>
     </Trade>
-    <Trade id="eda21575b3e225528cebe04f2b6b1483" name="" isin="">
+    <Trade id="0ef862ef0dc49e7f5af17502ef8be6f1" name="XETRA-GOLD" isin="DE000A0S9GB0">
       <Meta>
         <Date>23.10.2025</Date>
         <Time>07:32:33</Time>
@@ -4088,6 +4152,18 @@
     </Dividend>
   </Dividends>
   <DepositsWithdrawals>
+    <Transaction id="dfcdb2d920946b3414981e220b2101a4">
+      <Date>23.10.2024</Date>
+      <Desc>Elektronischer Guthabentransfer</Desc>
+      <Amount>50,00</Amount>
+      <Currency>EUR</Currency>
+    </Transaction>
+    <Transaction id="c56dd7b361c612257f5e81c0011bb997">
+      <Date>30.10.2024</Date>
+      <Desc>Elektronischer Guthabentransfer</Desc>
+      <Amount>1000,00</Amount>
+      <Currency>EUR</Currency>
+    </Transaction>
     <Transaction id="12c20a019d3ea47bdcfe0cb0195b6328">
       <Date>06.01.2025</Date>
       <Desc>Auszahlung veranlasst von daniel meier</Desc>
@@ -4122,18 +4198,6 @@
       <Date>14.10.2025</Date>
       <Desc>Elektronischer Guthabentransfer</Desc>
       <Amount>3000,00</Amount>
-      <Currency>EUR</Currency>
-    </Transaction>
-    <Transaction id="dfcdb2d920946b3414981e220b2101a4">
-      <Date>23.10.2024</Date>
-      <Desc>Elektronischer Guthabentransfer</Desc>
-      <Amount>50,00</Amount>
-      <Currency>EUR</Currency>
-    </Transaction>
-    <Transaction id="c56dd7b361c612257f5e81c0011bb997">
-      <Date>30.10.2024</Date>
-      <Desc>Elektronischer Guthabentransfer</Desc>
-      <Amount>1000,00</Amount>
       <Currency>EUR</Currency>
     </Transaction>
   </DepositsWithdrawals>

@@ -2,7 +2,9 @@ import json
 import os
 import logging
 from typing import Dict, List
-from .types import AppConfig, ProviderConfig, ProviderType
+from .data_models import AppConfig, ProviderConfig, ProviderType
+
+logger = logging.getLogger(__name__)
 
 def load_config(config_path: str = "providers.json", isin_map_path: str = "isin_map.json") -> AppConfig:
     """ 
@@ -45,7 +47,7 @@ def load_config(config_path: str = "providers.json", isin_map_path: str = "isin_
                                 rate_limit_ms=1000 # TODO: Parse textual rate limits if needed
                             ))
                         except (ValueError, KeyError) as e:
-                            logging.warning(f"Skipping provider {p_key}: {e}")
+                            logger.warning(f"Skipping provider {p_key}: {e}")
                 
                 # Support Legacy List format just in case? No, strict switch.
                 
@@ -54,13 +56,13 @@ def load_config(config_path: str = "providers.json", isin_map_path: str = "isin_
                     market_data_dir = data["market_data_dir"]
                     
         except Exception as e:
-            logging.error(f"Failed to load config file {config_path}: {e}")
+            logger.error(f"Failed to load config file {config_path}: {e}")
     else:
-        logging.info(f"Config file {config_path} not found. Using default defaults.")
+        logger.info(f"Config file {config_path} not found. Using default defaults.")
 
     # 2. Add Default Provider if list empty
     if not providers:
-        logging.info("No active providers configured. Adding Default YAHOO provider.")
+        logger.info("No active providers configured. Adding Default YAHOO provider.")
         providers.append(ProviderConfig(name=ProviderType.YAHOO, priority=1))
 
     # Sort
@@ -74,7 +76,7 @@ def load_config(config_path: str = "providers.json", isin_map_path: str = "isin_
                 if isinstance(loaded_map, dict):
                     ticker_map = loaded_map
         except Exception as e:
-            logging.warning(f"Failed to load ISIN map {isin_map_path}: {e}")
+            logger.warning(f"Failed to load ISIN map {isin_map_path}: {e}")
 
     # 4. Create Data Directory
     os.makedirs(market_data_dir, exist_ok=True)

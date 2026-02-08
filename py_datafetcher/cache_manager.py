@@ -4,7 +4,7 @@ import shutil
 import logging
 from typing import Optional, Dict
 from dataclasses import asdict
-from .types import AssetData, FxData, OHLCV
+from .data_models import AssetData, FxData, OHLCV
 
 class CacheManager:
     def __init__(self, data_dir: str):

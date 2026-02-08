@@ -7,3 +7,9 @@ ICD-DF-JSN-020,JSON Schema,Asset History,"""history"" ist ein Dict { ""YYYY-MM-D
 ICD-DF-JSN-030,JSON Schema,FX Structure,"FX JSON Root muss keys ""pair"", ""rate"" (Aktueller Kurs) und ""history"" enthalten. ""history"" ist Dict { ""YYYY-MM-DD"": float }.",-
 ICD-DF-CLI-010,Interface,CLI Arguments,"Aufruf: python datafetcher.py --mode update --assets ""[LIST]"" --fx ""[LIST]"".",-
 ICD-DF-CLI-020,Interface,Argument Assets,"Format: ""ISIN:TICKER:STARTDATE"" (Kommagetrennt). Beispiel: ""US0378331005:AAPL:2020-01-01"".",-
+ICD-DF-CLI-030,Interface,Verbose Flag,"Argument ""--verbose"" aktiviert detailliertes (farbiges) Logging im Terminal.",-
+ICD-DF-API-010,Python Interface,Data Models,"Das Modul exportiert explizite Datenklassen: AssetData, FxData, OHLCV (siehe ICD-DF-JSN-* für Felder).",-
+ICD-DF-API-020,Python Interface,Service Class,"Klasse ""DataFetcherService"" ist der zentrale Einstiegspunkt. Konstruktor: DataFetcherService(config_path: str = None).",-
+ICD-DF-API-030,Python Interface,Method get_asset,"Methode: get_asset(isin: str, ticker: str = None, force_update: bool = False) -> AssetData. Prüft Cache, fetcht bei Bedarf, gibt Objekt zurück.",-
+ICD-DF-API-040,Python Interface,Method get_fx,"Methode: get_fx(pair: str, force_update: bool = False) -> FxData. Liefert Wechselkursdaten (analog zu get_asset).",-
+ICD-DF-API-050,Python Interface,Return Types,"Alle Methoden geben typisierte Objekte zurück (keine rohen Dicts), um Autocomplete und Typsicherheit im Consumer-Code zu gewährleisten.",-

@@ -1,0 +1,7 @@
+ID,Category,Title,Description,Covered By
+F-DASH-100,Feature,CSV Upload,The Dashboard must provide a file uploader to accept broker CSV files.,-
+F-DASH-110,Feature,File Storage,Uploaded CSV files must be saved to the project root directory.,-
+F-SYS-100,System,Sequential Parsing,The system must execute 'run_csv_parser.py' followed by 'run_portfolio_history.py' after a successful upload.,-
+F-SYS-110,System,File Cleanup,The CSV parser must move processed files to the 'oldcsv' directory (existing functionality confirmed).,-
+F-DASH-120,Feature,Process Feedback,The Dashboard must display the success or failure status of the import process to the user.,-
+F-DASH-130,Feature,Auto Refresh,The Dashboard must verify if data has changed (e.g. journal.csv timestamp) and refresh the view automatically or prompt the user.,-

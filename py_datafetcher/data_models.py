@@ -7,6 +7,7 @@ import json
 class ProviderType(Enum):
     YAHOO = "YAHOO"
     ALPHAVANTAGE = "ALPHAVANTAGE"
+    TWELVE_DATA = "TWELVE_DATA"
 
 @dataclass
 class ProviderConfig:

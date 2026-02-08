@@ -1,0 +1,13 @@
+ID,Category,Title,Description,Covered By
+ICD-PM-API-010,Python Interface,Service Class,Das Modul muss eine Klasse 'PortfolioService' exportieren (in py_manage_portfolio.service), die als zentrale Schnittstelle dient.,-
+ICD-PM-DMO-010,Data Model,Position DTO,Es muss eine Datenklasse 'PortfolioPosition' geben mit Feldern: symbol, quantity (float), entry_price, current_price, market_value, unrealized_pl, unrealized_pct, stop_loss, initial_risk, r_multiple, is_valid (bool).,-
+ICD-PM-DMO-020,Data Model,Summary DTO,Es muss eine Datenklasse 'PortfolioSummary' geben mit Feldern: total_invested, total_unrealized_pl, total_risk, buying_power, equity.,-
+ICD-PM-API-020,Method,Get Positions,"Methode 'get_open_positions(update_prices=False) -> List[PortfolioPosition]'. Liefert eine Liste aller offenen Positionen mit berechneten Kennzahlen.",-
+ICD-PM-API-030,Method,Get Summary,"Methode 'get_summary() -> PortfolioSummary'. Liefert die aggregierten Finanzdaten (inkl. Journal-Daten wie Cash/Equity).",-
+ICD-PM-API-040,Integration,Price Fetching,"Die 'get_open_positions' Methode nutzt intern den 'DataFetcherService', um 'current_price' zu füllen.",-
+ICD-PM-API-050,Compatibility,UI Separation,"Die bestehende CLI (manage_stoploss.py) muss so refactored werden, dass sie nur noch diesen Service aufruft und die Ergebnisse darstellt, statt selbst zu rechnen.",-
+ICD-PM-FIL-010,File IO,Input Sources,"Der Service liest und parst intern 'trades.xml' (für Positionen), 'manual_risk_data.json' (für Stops) und 'journal.csv' (für Equity/Cash). Der Aufrufer muss keine Dateien hantieren.",-
+ICD-PM-API-060,API,Update Stop-Loss,"Methode 'update_stop_loss(symbol, new_stop) -> bool'. Findet intern die offene Position, führt Validierung durch, berechnet 'initial_risk' neu und speichert persistent.",-
+ICD-PM-API-070,API,Delete Stop-Loss,"Methode 'delete_stop_loss(symbol) -> bool'. Entfernt den Risikodatensatz für das angegebene Symbol aus der manual_risk_data.json.",-
+ICD-PM-VAL-010,Validation,Write Validation,Der Service validiert bei Schreibvorgängen die Stop-Distanz und Logik (z.B. Stop < Entry für Long).,-
+ICD-PM-FIL-030,Persistence,Risk Data Mapping,Der Service kapselt die Mapping-Logik zwischen dem einfachen 'symbol' (API) und dem internen Dateiformat 'SYMBOL_DATE' (Persistenz).,-

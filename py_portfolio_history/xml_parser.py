@@ -8,9 +8,32 @@ from .types import Transaction
 
 class XmlInputParser:
     def _parse_decimal(self, val_str: str) -> Decimal:
-        """ Handles German format '1.200,50' -> '1200.50' """
+        """ 
+        Smart parsing for decimal strings.
+        Handles: '1.200,50', '1,200.50', '10.50', '10,50'
+        """
         if not val_str: return Decimal("0")
-        clean = val_str.replace('.', '').replace(',', '.')
+        
+        # Remove any spaces
+        val_str = val_str.strip()
+        
+        # If both present, the last one is the decimal separator
+        if '.' in val_str and ',' in val_str:
+            dot_idx = val_str.rfind('.')
+            comma_idx = val_str.rfind(',')
+            if dot_idx > comma_idx:
+                # Standard format: 1,234.56 -> remove commas
+                clean = val_str.replace(',', '')
+            else:
+                # German format: 1.234,56 -> remove dots, replace comma
+                clean = val_str.replace('.', '').replace(',', '.')
+        elif ',' in val_str:
+            # Only comma: 10,50 -> replace with dot
+            clean = val_str.replace(',', '.')
+        else:
+            # Only dot or nothing: 10.50 -> keep as is
+            clean = val_str
+            
         try:
             return Decimal(clean)
         except:

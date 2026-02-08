@@ -20,11 +20,14 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 # Module imports
 from py_datafetcher.fetcher_core import FetcherOrchestrator
 from py_datafetcher.cache_manager import CacheManager
 from py_datafetcher.error_logger import ErrorLogger
-from py_datafetcher.types import AppConfig, ProviderConfig, ProviderType, OHLCV, DataFetcherError
+from py_datafetcher.data_models import AppConfig, ProviderConfig, ProviderType, OHLCV, DataFetcherError
 
 
 # =============================================================================
@@ -607,7 +610,7 @@ class TestRealYahooAPI:
     
     Test Tickers:
     - XDEF.DE: Valid Xetra ETF (Xtrackers Euro Defensive Tech)
-    - XDEF: Invalid ticker (does not exist)
+    - XDEF: Invalid ticker (does not exist for yahoo finance)
     """
 
     @pytest.fixture

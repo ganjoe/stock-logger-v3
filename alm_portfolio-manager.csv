@@ -1,19 +1,30 @@
 ID,Category,Title,Description,Covered By
-F-PM-010,Input,Transaktionsquelle,Das Skript muss die Transaktionsdaten aus der Datei 'trades.xml' lesen können.,-
-F-PM-020,Logic,Offene Positionen,Das Skript muss aus den Transaktionen die aktuell offenen Positionen ermitteln (Netto-Position ≠ 0).,-
-F-PM-030,Logic,Positions-Richtung,Das Skript muss Long- und Short-Positionen korrekt unterscheiden und anzeigen.,-
-F-PM-040,Logic,Durchschnittspreis,Der gewichtete Durchschnitts-Einstiegspreis muss für jede offene Position berechnet werden.,-
-F-PM-050,Persistence,Risikodaten laden,Das Skript muss vorhandene Risikodaten aus 'manual_risk_data.json' laden.,-
-F-PM-060,Persistence,Risikodaten speichern,Das Skript muss aktualisierte Risikodaten in 'manual_risk_data.json' speichern.,-
-F-PM-070,UX,Nur fehlende abfragen,"Bei Option 'Neu' darf nur für Positionen ohne hinterlegte Risikodaten nach dem Stop-Loss gefragt werden.",-
-F-PM-080,UX,Überspringen erlauben,Der Benutzer muss die Möglichkeit haben eine Position zu überspringen ('skip').,-
-F-PM-090,Calculation,Initial Risk,"Das Initial Risk muss berechnet werden als |Entry - StopLoss| × Quantity.",-
-F-PM-100,Calculation,Richtungsabhängig,Die Berechnung muss Long (Stop < Entry) und Short (Stop > Entry) korrekt berücksichtigen.,-
-F-PM-110,Data,Positions-Key,Jede Position muss eindeutig über Symbol + Entry Date identifizierbar sein.,-
-F-PM-115,Data,Trade-ID speichern,Zu jeder Position müssen die zugehörigen Trade-IDs (aller offenen Tranchen) mitgespeichert werden.,-
-F-PM-120,Output,Bestätigung,Nach dem Speichern muss eine Bestätigung mit dem Dateipfad ausgegeben werden.,-
-F-PM-130,UX,Interaktives Menü,"Das Skript muss ein Menü mit Optionen bieten: Neu, Bearbeiten, Liste, Löschen, Beenden.",-
-F-PM-140,UX,Liste mit Status,"Die Listenansicht muss alle offenen Positionen anzeigen (mit und ohne Stop-Loss) und den Status (OK, Trail, Missing).",-
-F-PM-150,UX,Bearbeiten,"Der Benutzer muss bestehende Stop-Loss-Werte bearbeiten können.",-
-F-PM-160,UX,Löschen,Der Benutzer muss Einträge löschen können.,-
-F-PM-170,Validation,Stop-Loss Warnung,"Bei unlogischen Stop-Loss-Werten (z.B. Stop > Entry für Long) muss eine Warnung angezeigt werden mit Option zum Überschreiben.",-
+F-PM-010,Input,Transaktionsquelle,Das Skript muss die Transaktionsdaten aus der Datei 'trades.xml' lesen können.,service.py
+F-PM-020,Logic,Offene Positionen,Das Skript muss aus den Transaktionen die aktuell offenen Positionen ermitteln (Netto-Position ≠ 0).,service.py
+F-PM-030,Logic,Positions-Richtung,Das Skript muss Long- und Short-Positionen korrekt unterscheiden und anzeigen.,service.py
+F-PM-040,Logic,Durchschnittspreis,Der gewichtete Durchschnitts-Einstiegspreis muss für jede offene Position berechnet werden.,service.py
+F-PM-050,Persistence,Risikodaten laden,Das Skript muss vorhandene Risikodaten aus 'manual_risk_data.json' laden.,service.py
+F-PM-060,Persistence,Risikodaten speichern,Das Skript muss aktualisierte Risikodaten in 'manual_risk_data.json' speichern.,manage_stoploss.py
+F-PM-070,UX,Nur fehlende abfragen,"Bei Option 'Neu' darf nur für Positionen ohne hinterlegte Risikodaten nach dem Stop-Loss gefragt werden.",manage_stoploss.py
+F-PM-080,UX,Überspringen erlauben,Der Benutzer muss die Möglichkeit haben eine Position zu überspringen ('skip').,manage_stoploss.py
+F-PM-090,Calculation,Initial Risk,"Das Initial Risk muss berechnet werden als |Entry - StopLoss| × Quantity.",service.py
+F-PM-100,Calculation,Richtungsabhängig,Die Berechnung muss Long (Stop < Entry) und Short (Stop > Entry) korrekt berücksichtigen.,service.py
+F-PM-110,Data,Positions-Key,Jede Position muss eindeutig über Symbol + Entry Date identifizierbar sein.,service.py
+F-PM-115,Data,Trade-ID speichern,Zu jeder Position müssen die zugehörigen Trade-IDs (aller offenen Tranchen) mitgespeichert werden.,manage_stoploss.py
+F-PM-120,Output,Bestätigung,Nach dem Speichern muss eine Bestätigung mit dem Dateipfad ausgegeben werden.,manage_stoploss.py
+F-PM-130,UX,Interaktives Menü,"Das Skript muss ein Menü mit Optionen bieten: Neu, Bearbeiten, Liste, Löschen, Beenden.",manage_stoploss.py
+F-PM-140,UX,Liste mit Status,"Die Listenansicht muss alle offenen Positionen anzeigen (mit und ohne Stop-Loss) und den Status (OK, Trail, Missing).",manage_stoploss.py
+F-PM-150,UX,Bearbeiten,"Der Benutzer muss bestehende Stop-Loss-Werte bearbeiten können.",manage_stoploss.py
+F-PM-160,UX,Löschen,Der Benutzer muss Einträge löschen können.,manage_stoploss.py
+F-PM-170,Validation,Stop-Loss Warnung,"Bei unlogischen Stop-Loss-Werten (z.B. Stop > Entry für Long) muss eine Warnung angezeigt werden mit Option zum Überschreiben.",manage_stoploss.py
+F-PM-180,Integration,DataFetcher Schnittstelle,Das Skript muss aktuelle Marktpreise über den py_datafetcher Dienst (Cache) beziehen können.,service.py
+F-PM-190,UX,Marktpreis Anzeige,"Die Listenansicht muss eine Spalte 'Market' enthalten, die den aktuellsten Preis aus dem Cache anzeigt.",manage_stoploss.py
+F-PM-200,UX,Marktdaten Update,Der Benutzer muss aus dem Menü heraus ein Update der Marktpreise via py_datafetcher auslösen können.,manage_stoploss.py
+F-PM-210,UX,Visualisierung Fetching,"Der Fetching-Prozess muss durch farbige Symbole (ANSI-Farben, z.B. Erfolg=grün, Anfragen=cyan) und Echtzeit-Streaming visualisiert werden.",manage_stoploss.py
+F-PM-220,Input,Robuste Dezimal-Arithmetik,Das Skript muss sowohl Punkt als auch Komma als Dezimaltrenner bei Benutzereingaben sowie in der trades.xml akzeptieren.,manage_stoploss.py
+F-PM-230,Calculation,Unrealized P&L,"Das Skript berechnet den unrealisierten Gewinn/Verlust absolut und in Prozent (Marktpreis vs. Einstand).",service.py
+F-PM-240,Calculation,R-Multiple,"Das R-Multiple (P&L / Initial Risk) wird für jede Position mit hinterlegtem Risiko berechnet.",service.py
+F-PM-250,Output,Portfolio Summen,Die Übersicht zeigt Gesamtsummen für Investiertes Kapital (Marktwert) und nicht realisierte G+V an.,service.py
+F-PM-260,Output,Journal Integration,"Die Kennzahlen Equity, Buying Power (Cash) und Invested (Assets) werden aus der journal.csv gelesen und angezeigt.",service.py
+F-PM-270,Architecture,Service Entkopplung,"Die Geschäftslogik ist in PortfolioService gekapselt; der Datenaustausch erfolgt über DTOs (PortfolioPosition, PortfolioSummary).",service.py
+F-PM-280,UX,Bunte Formatierung,"Die CLI nutzt ANSI-Farben für Performance-Indikatoren (Grün=Gewinn, Rot=Verlust) und Status-Flags.",manage_stoploss.py
