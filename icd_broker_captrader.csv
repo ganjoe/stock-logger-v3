@@ -1,0 +1,12 @@
+ID,Category,Title,Description,Covered By
+ICD-PM-010,Portfolio,Get Positions,Das Interface muss eine Liste aller offenen Positionen liefern (Downstream: PortfolioService).,BrokerDataSource.get_positions
+ICD-PM-020,Portfolio,Get Account Metrics,Das Interface muss aggregierte Account-Kennzahlen (Equity, Cash) liefern.,BrokerDataSource.get_account_metrics
+ICD-PM-030,Portfolio,Manage Stop Loss,Das Interface muss das Setzen/Ändern von Stop-Loss-Orders ermöglichen.,BrokerDataSource.set_stop_loss
+ICD-DF-010,DataFetcher,Get Daily History,Das Interface muss historische Tageskerzen (OHLCV) für ein Symbol abrufen können (für DataFetcher).,-
+ICD-DF-020,DataFetcher,Batch Retrieval,Das Interface muss den Abruf mehrerer Symbole unterstützen um Overhead zu vermeiden.,-
+ICD-BRK-010,Constraint,Batch Limit,Der gleichzeitige Abruf von historischen Daten ist auf maximal 100 Symbole/Requests limitiert (IBKR API Limit).,-
+ICD-BRK-020,Constraint,Pacing Violation,Das System muss "Pacing Violation" Fehler (Code 162) erkennen und Requests drosseln.,-
+ICD-BRK-030,Data,Adjustment Handling,Historische Daten müssen splits-adjusted geliefert werden ("whatToShow='ADJUSTED_LAST'").,-
+ICD-BRK-040,Connection,Shared Connection,Portfolio-Service und DataFetcher müssen dieselbe IB-Verbindung nutzen können (Singleton oder Shared Resource).,-
+ICD-BRK-050,Data,Bar Size Configuration,Die Daily Charts müssen explizit als barSize='1 day' angefordert werden.,-
+ICD-BRK-060,Connection,Unique Client ID,Die Client ID für die Broker-Verbindung muss bei jedem Start eindeutig oder zufällig (Random) gewählt werden um Konflikte (Code 326) mit anderen Sessions zu vermeiden.,py_manage_portfolio/manage_stoploss.py

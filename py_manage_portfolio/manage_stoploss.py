@@ -556,7 +556,7 @@ def _connect_to_broker(service: PortfolioService):
     print()
     
     host = input("Host [127.0.0.1]: ").strip() or "127.0.0.1"
-    port_str = input("Port [7497]: ").strip() or "7497"
+    port_str = input("Port [4001]: ").strip() or "4001"
     account_id = input("Account ID (leer=auto): ").strip() or None
     
     try:
@@ -565,12 +565,17 @@ def _connect_to_broker(service: PortfolioService):
         print("⚠ Ungültiger Port.")
         return
     
-    print(f"\nVerbinde zu {host}:{port}...")
+    # Use random Client ID (100-999) to avoid conflicts with TWS or other clients
+    import random
+    client_id = random.randint(100, 999)
+    
+    print(f"\nVerbinde zu {host}:{port} (Client ID: {client_id})...")
     
     try:
         new_source = BrokerDataSource(
             host=host,
             port=port,
+            client_id=client_id,
             account_id=account_id,
             auto_connect=True
         )

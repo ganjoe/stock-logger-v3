@@ -24,18 +24,21 @@ class BrokerDataSource(PortfolioDataSource):
     Args:
         host: TWS/Gateway host (default: 127.0.0.1)
         port: TWS/Gateway port (default: 7497)
+        client_id: TWS Client ID (default: 1)
         account_id: Optional account ID for multi-account setups
         auto_connect: If True, connect immediately on init
     """
     
-    def __init__(self, host: str = "127.0.0.1", port: int = 7497,
+    def __init__(self, host: str = "127.0.0.1", port: int = 7497, client_id: int = 1,
                  account_id: Optional[str] = None, auto_connect: bool = True):
-        config = ConnectionConfig(host=host, port=port)
+        config = ConnectionConfig(host=host, port=port, client_id=client_id)
         self._connection = IBKRConnection(config)
         self._account_id = account_id
         
         if auto_connect:
             self._connection.connect()
+            # Force delayed data (3) to avoid data subscription costs
+            self._connection.ib.reqMarketDataType(3)
     
     def _get_account(self) -> str:
         """Get the account ID to use for API calls."""
@@ -99,7 +102,16 @@ class BrokerDataSource(PortfolioDataSource):
         summary = ib.accountSummary(account)
         
         # Extract relevant values
-        values = {item.tag: float(item.value) for item in summary if item.account == account}
+        # Extract relevant values safely
+        values = {}
+        target_tags = {'NetLiquidation', 'AvailableFunds', 'GrossPositionValue'}
+        
+        for item in summary:
+            if item.account == account and item.tag in target_tags:
+                try:
+                    values[item.tag] = float(item.value)
+                except ValueError:
+                    pass
         
         return AccountMetrics(
             equity=values.get('NetLiquidation', 0.0),

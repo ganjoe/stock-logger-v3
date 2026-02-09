@@ -47,6 +47,19 @@ class PortfolioService:
     def set_data_source(self, source: PortfolioDataSource):
         """Switch the data source at runtime (F-PDS-110)."""
         self._data_source = source
+        
+        # F-BRK-Integration: If source is Broker, wire up DataFetcher
+        # This allows DataFetcher to use the broker connection as a secondary source
+        try:
+            if "BrokerDataSource" in type(source).__name__:
+                from py_broker_captrader.data_provider import BrokerDataProvider
+                # Access internals - we know BrokerDataSource has _connection
+                if hasattr(source, '_connection'):
+                    provider = BrokerDataProvider(source._connection)
+                    self.data_fetcher.add_provider(provider)
+                    print("✓ Broker-DataFetcher integrated.")
+        except Exception as e:
+            print(f"⚠ Failed to integrate Broker DataFetcher: {e}")
     
     def get_data_source(self) -> PortfolioDataSource:
         """Get the current data source."""

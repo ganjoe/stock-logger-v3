@@ -30,6 +30,12 @@ class DataFetcherService:
         # Initialize Orchestrator
         self.orchestrator = FetcherOrchestrator(self.config, self.cache, self.providers, self.error_logger)
 
+    def add_provider(self, provider):
+        """Allows adding a provider (e.g. BrokerDataProvider) at runtime."""
+        self.providers.append(provider)
+        # Re-init orchestrator with new list
+        self.orchestrator = FetcherOrchestrator(self.config, self.cache, self.providers, self.error_logger)
+
     def get_asset(self, isin: str, ticker: Optional[str] = None, force_update: bool = False) -> Optional[AssetData]:
         """
         Retrieves asset data using a Cache-Through pattern.
