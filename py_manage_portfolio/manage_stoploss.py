@@ -524,7 +524,7 @@ def action_switch_data_source(service: PortfolioService):
     print(f"Aktuell: {current_source}")
     print()
     print("  [1] 📁 Offline (trades.xml, manual_risk_data.json)")
-    print("  [2] 🔌 Broker (CapTrader/IBKR) [NICHT IMPLEMENTIERT]")
+    print("  [2] 🔌 Broker (CapTrader/IBKR)")
     print("  [0] Zurück")
     
     choice = input("Auswahl: ").strip()
@@ -534,14 +534,62 @@ def action_switch_data_source(service: PortfolioService):
         service.set_data_source(new_source)
         print("✓ Datenquelle gewechselt zu: Offline")
     elif choice == '2':
-        print("⚠ BrokerDataSource ist noch nicht implementiert.")
-        print("  Dieser Menüpunkt wird mit py_broker_captrader aktiviert.")
+        _connect_to_broker(service)
     elif choice == '0':
         pass
     else:
         print("Ungültige Auswahl.")
     
     input("\nDrücke Enter zum Fortfahren...")
+
+def _connect_to_broker(service: PortfolioService):
+    """Helper to connect to IBKR broker."""
+    try:
+        from py_broker_captrader import BrokerDataSource
+    except ImportError:
+        print("⚠ py_broker_captrader Modul nicht gefunden.")
+        print("  Stelle sicher, dass ib_insync installiert ist: pip install ib_insync")
+        return
+    
+    print("\n--- Broker Verbindung ---")
+    print("Voraussetzung: TWS oder IB Gateway muss laufen und eingeloggt sein.")
+    print()
+    
+    host = input("Host [127.0.0.1]: ").strip() or "127.0.0.1"
+    port_str = input("Port [7497]: ").strip() or "7497"
+    account_id = input("Account ID (leer=auto): ").strip() or None
+    
+    try:
+        port = int(port_str)
+    except ValueError:
+        print("⚠ Ungültiger Port.")
+        return
+    
+    print(f"\nVerbinde zu {host}:{port}...")
+    
+    try:
+        new_source = BrokerDataSource(
+            host=host,
+            port=port,
+            account_id=account_id,
+            auto_connect=True
+        )
+        
+        if new_source.is_connected():
+            service.set_data_source(new_source)
+            print("✓ Verbunden mit IBKR!")
+            
+            # Show available accounts
+            accounts = new_source._connection.ib.managedAccounts()
+            print(f"  Verfügbare Accounts: {', '.join(accounts)}")
+            print(f"  Aktiver Account: {new_source._get_account()}")
+        else:
+            print("⚠ Verbindung fehlgeschlagen.")
+            
+    except ConnectionError as e:
+        print(f"⚠ Verbindungsfehler: {e}")
+    except Exception as e:
+        print(f"⚠ Fehler: {e}")
 
 def main():
     service_live = PortfolioService(project_root=".", context="live")
