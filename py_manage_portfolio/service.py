@@ -5,16 +5,28 @@ import math
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, TYPE_CHECKING
 from .models import PortfolioPosition, PortfolioSummary
+from .data_source import PortfolioDataSource, AccountMetrics
 from py_datafetcher.service import DataFetcherService
 from py_portfolio_history.xml_parser import XmlInputParser
 
+if TYPE_CHECKING:
+    from .offline_data_source import OfflineDataSource
+
 class PortfolioService:
-    def __init__(self, project_root: str, context: str = "live"):
+    def __init__(self, project_root: str, context: str = "live", 
+                 data_source: Optional[PortfolioDataSource] = None):
         self.project_root = os.path.abspath(project_root)
         self.context = context.lower()
         self.data_fetcher = DataFetcherService()
+        
+        # Initialize data source (default: OfflineDataSource)
+        if data_source is not None:
+            self._data_source = data_source
+        else:
+            from .offline_data_source import OfflineDataSource
+            self._data_source = OfflineDataSource(project_root=self.project_root, context=self.context)
         
         prefix = "paper-" if self.context == "paper" else ""
         
@@ -31,6 +43,15 @@ class PortfolioService:
             self.journal_file = os.path.join(self.project_root, "paper_journal.csv")
         else:
             self.journal_file = os.path.join(self.project_root, "journal.csv")
+    
+    def set_data_source(self, source: PortfolioDataSource):
+        """Switch the data source at runtime (F-PDS-110)."""
+        self._data_source = source
+    
+    def get_data_source(self) -> PortfolioDataSource:
+        """Get the current data source."""
+        return self._data_source
+        
         
     def _load_risk_data(self) -> Dict:
         """Load existing risk data from JSON file."""

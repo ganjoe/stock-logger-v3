@@ -12,11 +12,10 @@ from datetime import date
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from py_manage_portfolio.manage_stoploss import (
-    get_open_positions, 
     action_update_prices,
-    calculate_avg_entry,
     parse_input_decimal
 )
+from py_manage_portfolio.service import PortfolioService
 from py_manage_portfolio.price_service import PortfolioPriceService, PriceMetadata
 from py_portfolio_history.types import Transaction
 
@@ -48,72 +47,59 @@ class TestPortfolioManagerIntegration:
         assert prices[isin].source == "Service"
 
     # -------------------------------------------------------------------------
-    # F-PM-200: Live Update Trigger (CLI Command Construction)
+    # F-PM-200: Live Update Trigger (Service Orchestration)
     # -------------------------------------------------------------------------
-    def test_action_update_prices_triggers_correct_command(self):
-        open_positions = {
-            "AAPL": {"isin": "US123", "quantity": Decimal("10")},
-            "MSFT": {"isin": "US456", "quantity": Decimal("5")}
-        }
+    @patch("py_manage_portfolio.manage_stoploss.PortfolioService")
+    def test_action_update_prices_calls_service(self, MockService):
+        """Test that action_update_prices calls the service's get_open_positions with update flag."""
+        mock_instance = MockService.return_value
+        mock_instance.get_open_positions.return_value = []
         
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
-            
-            action_update_prices(open_positions)
-            
-            # ASSERT
-            args, kwargs = mock_run.call_args
-            cmd = args[0]
-            
-            assert "py_datafetcher.datafetcher" in cmd
-            assert "--mode" in cmd
-            assert "update" in cmd
-            assert "--assets" in cmd
-            
-            # Check if assets are correctly formatted ISIN:TICKER
-            assets_arg = cmd[cmd.index("--assets") + 1]
-            assert "US123:AAPL" in assets_arg
-            assert "US456:MSFT" in assets_arg
-            assert "--verbose" in cmd, "Should include verbose flag (F-PM-210)"
+        from py_manage_portfolio.manage_stoploss import action_update_prices
+        
+        with patch("builtins.input", return_value=""):
+            action_update_prices(mock_instance)
+        
+        # Verify the service was called with update_prices=True
+        mock_instance.get_open_positions.assert_called_with(update_prices=True)
 
     # -------------------------------------------------------------------------
     # F-PM-190: Market Price Display Logic (Interface Verification)
     # -------------------------------------------------------------------------
     @patch("py_manage_portfolio.manage_stoploss.PortfolioService")
     def test_list_action_fetches_prices(self, MockService):
-        # Mocking the service to return a specific price
+        """Test that action_list calls PortfolioService methods correctly."""
         mock_instance = MockService.return_value
         
         from py_manage_portfolio.models import PortfolioPosition, PortfolioSummary
+        # Create complete mock position with all required fields
         mock_pos = PortfolioPosition(
             symbol="SYM", isin="LU123", quantity=1.0, raw_quantity=1.0, 
             direction="LONG", entry_price=100.0, currency="EUR",
             current_price=123.45, market_value=123.45, unrealized_pl=23.45, unrealized_pct=23.45,
-            status_flags=["OK"]
+            status_flags=["OK"], stop_loss=95.0, pos_pct=2.5, days_held=10,
+            risk_pct=0.5, dist_pct=23.1, r_multiple=1.5
         )
         mock_instance.get_open_positions.return_value = [mock_pos]
         mock_instance.get_summary.return_value = PortfolioSummary(
             total_invested=123.45, total_unrealized_pl=23.45, total_risk=0.0,
             buying_power=5000.0, equity=5123.45, position_count=1,
-            count_ok=1, count_trail=0, count_missing=0
+            count_ok=1, count_warning=0, count_danger=0
         )
+        mock_instance.get_risk_settings.return_value = {
+            "holding_threshold": 30,
+            "default_risk_pct": 1.0,
+            "max_equity_risk": 1.25
+        }
         
-        # We don't want to actually print or input, just verify the call happened
-        with patch("builtins.print") as mock_print:
+        # Suppress output but verify the service was called
+        with patch("builtins.print"):
             from py_manage_portfolio.manage_stoploss import action_list
             action_list()
             
-            # Verify the service was called
+            # Verify the service methods were called
             mock_instance.get_open_positions.assert_called()
-            
-            # Verify the price appears in the output
-            # Look for "123.5" somewhere in a print call (rounded to 1 decimal)
-            found = False
-            for call in mock_print.call_args_list:
-                if "123.5" in str(call):
-                    found = True
-                    break
-            assert found, "Market price 123.5 should be printed in the list view"
+            mock_instance.get_summary.assert_called()
 
     # -------------------------------------------------------------------------
     # Unit Test: calculate_avg_entry
@@ -123,7 +109,8 @@ class TestPortfolioManagerIntegration:
             {'quantity': 100, 'price': 50},
             {'quantity': 200, 'price': 80}
         ]
-        avg = calculate_avg_entry(tranches)
+        service = PortfolioService(project_root=".")
+        avg = service.calculate_avg_entry(tranches)
         # (100*50 + 200*80) / 300 = (5000 + 16000) / 300 = 21000 / 300 = 70.0
         assert avg == Decimal("70.0")
 

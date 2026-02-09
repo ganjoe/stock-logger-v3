@@ -31,7 +31,7 @@
 | ID | Category | Title | Description | Covered By |
 |----|----------|-------|-------------|------------|
 | F-PDS-010 | Architecture | Abstract Interface | Das System muss ein abstraktes Interface `PortfolioDataSource` definieren, das die Datenquelle vom PortfolioService entkoppelt. | - |
-| F-PDS-020 | Architecture | Runtime Selection | Die Wahl der Datenquelle (Offline/Broker) erfolgt zur Laufzeit beim Instanziieren, nicht über Config-Dateien. | - |
+| F-PDS-020 | Architecture | Runtime Selection | Die Wahl der Datenquelle (Offline/Broker) erfolgt zur Laufzeit, nicht über Config-Dateien. | - |
 | F-PDS-030 | API | Account ID Parameter | Das Interface muss einen optionalen `account_id` Parameter unterstützen für Multi-Account-Szenarien. | - |
 | F-PDS-040 | API | Get Positions | Methode `get_positions() -> List[Position]` liefert offene Positionen inkl. Qty, Entry, ISIN. | - |
 | F-PDS-050 | API | Get Stop Losses | Methode `get_stop_losses() -> Dict[str, StopOrder]` liefert aktive Stop-Loss-Orders/Daten. | - |
@@ -40,6 +40,9 @@
 | F-PDS-080 | API | Add Position | Methode `add_position(...) -> PositionResult` fügt Position hinzu (nur für Paper/Offline relevant). | - |
 | F-PDS-090 | API | Close Position | Methode `close_position(symbol) -> bool` schließt/löscht eine Position. | - |
 | F-PDS-100 | Consistency | Identical Processing | Die Verarbeitungslogik im PortfolioService muss für alle DataSource-Implementierungen identisch sein. | - |
+| F-PDS-110 | API | Switch DataSource | Der PortfolioService muss eine Methode `set_data_source(source)` haben, um zur Laufzeit die DataSource zu wechseln. | - |
+| F-PDS-120 | UX | CLI Menü Datenquelle | Das Hauptmenü in `py_manage_portfolio/manage_stoploss.py` muss einen Menüpunkt "[D] Datenquelle" enthalten, der zwischen Offline und Broker umschalten lässt. | - |
+| F-PDS-130 | Default | Offline Default | Beim Start ist immer "Offline" als Datenquelle aktiv. Keine persistente Speicherung der Auswahl. | - |
 
 ---
 
@@ -73,23 +76,28 @@
 
 ---
 
-## Widersprüche / Offene Fragen
+## Abgenommene Entscheidungen
 
-> [!IMPORTANT]
-> **Frage 1:** Soll `add_position()` auch für den BrokerDataSource implementiert werden?  
-> → Bei echtem Broker würde das eine Market/Limit Order platzieren.  
-> → **Empfehlung:** Nur für OfflineDataSource. Broker-Version wirft NotImplementedError.
-
-> [!IMPORTANT]
-> **Frage 2:** Wie werden Marktpreise geholt?  
-> → OfflineDataSource nutzt weiterhin `py_datafetcher`  
-> → BrokerDataSource könnte Marktdaten direkt vom Broker holen  
-> → **Empfehlung:** Marktpreise bleiben außerhalb des DataSource-Interface.
+| Frage | Entscheidung |
+|-------|--------------|
+| `add_position()` beim Broker | Wirft `NotImplementedError`. Paper-Trading bleibt Offline (Planungstool). |
+| Broker Live vs. Paper | Keine Unterscheidung im Code. Nur `account_id` entscheidet (Multi-Account). |
+| Marktpreise | Weiterhin über `py_datafetcher`. Broker-Integration als Future Feature. |
 
 ---
 
-## Nächste Schritte
+## Future Features (nicht in dieser Phase)
 
-1. [ ] Fragen klären mit User
-2. [ ] ICD für neues Interface erstellen
-3. [ ] IMP_broker_captrader.md erstellen (Architect)
+| ID | Category | Title | Description | Covered By |
+|----|----------|-------|-------------|------------|
+| F-DF-200 | Future | CapTrader Provider | `py_datafetcher/provider_captrader.py` als zusätzliche Online-Datenquelle für Marktpreise via IBKR API. | - |
+
+---
+
+## Status
+
+- [x] Anforderungen abgenommen
+- [x] Offene Fragen geklärt
+- [ ] ICD für neues Interface erstellen
+- [ ] Implementierung starten
+

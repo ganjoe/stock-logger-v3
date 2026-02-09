@@ -80,8 +80,13 @@ def show_menu(service: PortfolioService):
     action_list(service)  # Always show the list at the top
     
     c_bold, c_yellow, c_reset = "\033[1m", "\033[93m", "\033[0m"
+    
+    # Show current data source
+    source_name = type(service.get_data_source()).__name__
+    source_indicator = "📁 Offline" if "Offline" in source_name else "🔌 Broker"
+    
     print("\n" + "=" * 60)
-    print(f"{c_bold}📊 PORTFOLIOMANAGER{c_reset}")
+    print(f"{c_bold}📊 PORTFOLIOMANAGER{c_reset}  [{source_indicator}]")
     print("=" * 60)
     print("  [1] Stop-Loss bearbeiten (LIVE)")
     print("  [2] Liste aller Positionen (LIVE)")
@@ -89,6 +94,7 @@ def show_menu(service: PortfolioService):
     print("  [4] 📄 Minervini Wizard (Live)")
     print("  [5] 🧪 Simulation & Paper Portfolio")
     print("-" * 60)
+    print("  [D] Datenquelle wechseln")
     print("  [q] Beenden")
     print("-" * 60)
     return input("Auswahl: ").strip().lower()
@@ -509,6 +515,34 @@ def action_update_prices(service: PortfolioService):
     print("✓ Marktdaten erfolgreich aktualisiert.")
     input("\nDrücke Enter zum Fortfahren...") # Hold after slow update
 
+def action_switch_data_source(service: PortfolioService):
+    """Switch between Offline and Broker data sources (F-PDS-120)."""
+    from .offline_data_source import OfflineDataSource
+    
+    current_source = type(service.get_data_source()).__name__
+    print("\n--- Datenquelle wechseln ---")
+    print(f"Aktuell: {current_source}")
+    print()
+    print("  [1] 📁 Offline (trades.xml, manual_risk_data.json)")
+    print("  [2] 🔌 Broker (CapTrader/IBKR) [NICHT IMPLEMENTIERT]")
+    print("  [0] Zurück")
+    
+    choice = input("Auswahl: ").strip()
+    
+    if choice == '1':
+        new_source = OfflineDataSource(project_root=service.project_root, context=service.context)
+        service.set_data_source(new_source)
+        print("✓ Datenquelle gewechselt zu: Offline")
+    elif choice == '2':
+        print("⚠ BrokerDataSource ist noch nicht implementiert.")
+        print("  Dieser Menüpunkt wird mit py_broker_captrader aktiviert.")
+    elif choice == '0':
+        pass
+    else:
+        print("Ungültige Auswahl.")
+    
+    input("\nDrücke Enter zum Fortfahren...")
+
 def main():
     service_live = PortfolioService(project_root=".", context="live")
     service_paper = PortfolioService(project_root=".", context="paper")
@@ -520,6 +554,7 @@ def main():
         elif choice == '3': action_update_prices(service_live)
         elif choice == '4': run_sizing_wizard(service_live, source="live") # Changed to Minervini Wizard (Live)
         elif choice == '5': start_paper_mode()
+        elif choice == 'd': action_switch_data_source(service_live)
         elif choice in ['q', 'quit', 'exit']:
             print("\nAuf Wiedersehen!")
             break
