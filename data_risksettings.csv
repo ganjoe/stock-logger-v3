@@ -1,0 +1,5 @@
+Key;Value;Description
+holding_threshold;30;Maximale Haltedauer in Tagen (Time-Stop)
+default_risk_pct;1.0;Standard Risiko pro Trade in % der Equity
+max_equity_risk;1.25;Schwellenwert für Warnung bei zu hohem Equity-Risiko (%)
+EOF

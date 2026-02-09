@@ -5,26 +5,44 @@ F-PM-030,Logic,Positions-Richtung,Das Skript muss Long- und Short-Positionen kor
 F-PM-040,Logic,Durchschnittspreis,Der gewichtete Durchschnitts-Einstiegspreis muss für jede offene Position berechnet werden.,service.py
 F-PM-050,Persistence,Risikodaten laden,Das Skript muss vorhandene Risikodaten aus 'manual_risk_data.json' laden.,service.py
 F-PM-060,Persistence,Risikodaten speichern,Das Skript muss aktualisierte Risikodaten in 'manual_risk_data.json' speichern.,manage_stoploss.py
-F-PM-070,UX,Nur fehlende abfragen,"Bei Option 'Neu' darf nur für Positionen ohne hinterlegte Risikodaten nach dem Stop-Loss gefragt werden.",manage_stoploss.py
-F-PM-080,UX,Überspringen erlauben,Der Benutzer muss die Möglichkeit haben eine Position zu überspringen ('skip').,manage_stoploss.py
-F-PM-090,Calculation,Initial Risk,"Das Initial Risk muss berechnet werden als |Entry - StopLoss| × Quantity.",service.py
+F-PM-080,UX,Überspringen erlauben,Der Benutzer muss die Möglichkeit haben eine Position im Batch-Prozess zu überspringen ('skip').,manage_stoploss.py
+F-PM-090,Calculation,Initial Risk,"Das Initial Risk wird berechnet als |Entry - StopLoss| × Quantity (Bestandspositionen).",service.py
 F-PM-100,Calculation,Richtungsabhängig,Die Berechnung muss Long (Stop < Entry) und Short (Stop > Entry) korrekt berücksichtigen.,service.py
 F-PM-110,Data,Positions-Key,Jede Position muss eindeutig über Symbol + Entry Date identifizierbar sein.,service.py
 F-PM-115,Data,Trade-ID speichern,Zu jeder Position müssen die zugehörigen Trade-IDs (aller offenen Tranchen) mitgespeichert werden.,manage_stoploss.py
 F-PM-120,Output,Bestätigung,Nach dem Speichern muss eine Bestätigung mit dem Dateipfad ausgegeben werden.,manage_stoploss.py
-F-PM-130,UX,Interaktives Menü,"Das Skript muss ein Menü mit Optionen bieten: Neu, Bearbeiten, Liste, Löschen, Beenden.",manage_stoploss.py
-F-PM-140,UX,Liste mit Status,"Die Listenansicht muss alle offenen Positionen anzeigen (mit und ohne Stop-Loss) und den Status (OK, Trail, Missing).",manage_stoploss.py
-F-PM-150,UX,Bearbeiten,"Der Benutzer muss bestehende Stop-Loss-Werte bearbeiten können.",manage_stoploss.py
-F-PM-160,UX,Löschen,Der Benutzer muss Einträge löschen können.,manage_stoploss.py
-F-PM-170,Validation,Stop-Loss Warnung,"Bei unlogischen Stop-Loss-Werten (z.B. Stop > Entry für Long) muss eine Warnung angezeigt werden mit Option zum Überschreiben.",manage_stoploss.py
-F-PM-180,Integration,DataFetcher Schnittstelle,Das Skript muss aktuelle Marktpreise über den py_datafetcher Dienst (Cache) beziehen können.,service.py
-F-PM-190,UX,Marktpreis Anzeige,"Die Listenansicht muss eine Spalte 'Market' enthalten, die den aktuellsten Preis aus dem Cache anzeigt.",manage_stoploss.py
-F-PM-200,UX,Marktdaten Update,Der Benutzer muss aus dem Menü heraus ein Update der Marktpreise via py_datafetcher auslösen können.,manage_stoploss.py
-F-PM-210,UX,Visualisierung Fetching,"Der Fetching-Prozess muss durch farbige Symbole (ANSI-Farben, z.B. Erfolg=grün, Anfragen=cyan) und Echtzeit-Streaming visualisiert werden.",manage_stoploss.py
-F-PM-220,Input,Robuste Dezimal-Arithmetik,Das Skript muss sowohl Punkt als auch Komma als Dezimaltrenner bei Benutzereingaben sowie in der trades.xml akzeptieren.,manage_stoploss.py
-F-PM-230,Calculation,Unrealized P&L,"Das Skript berechnet den unrealisierten Gewinn/Verlust absolut und in Prozent (Marktpreis vs. Einstand).",service.py
-F-PM-240,Calculation,R-Multiple,"Das R-Multiple (P&L / Initial Risk) wird für jede Position mit hinterlegtem Risiko berechnet.",service.py
-F-PM-250,Output,Portfolio Summen,Die Übersicht zeigt Gesamtsummen für Investiertes Kapital (Marktwert) und nicht realisierte G+V an.,service.py
-F-PM-260,Output,Journal Integration,"Die Kennzahlen Equity, Buying Power (Cash) und Invested (Assets) werden aus der journal.csv gelesen und angezeigt.",service.py
-F-PM-270,Architecture,Service Entkopplung,"Die Geschäftslogik ist in PortfolioService gekapselt; der Datenaustausch erfolgt über DTOs (PortfolioPosition, PortfolioSummary).",service.py
-F-PM-280,UX,Bunte Formatierung,"Die CLI nutzt ANSI-Farben für Performance-Indikatoren (Grün=Gewinn, Rot=Verlust) und Status-Flags.",manage_stoploss.py
+F-PM-130,UX,Interaktives Menü,"Das Menü bietet Optionen: Minervini Wizard (Neu), Bearbeiten, Liste, Marktdaten-Update, Beenden.",manage_stoploss.py
+F-PM-160,Logic,Löschen durch Null,Das Löschen eines Stop-Loss erfolgt durch Setzen des Wertes auf 0.0 (impliziert Totalverlust).,service.py
+F-PM-170,Validation,Stop-Loss Warnung,"Warnung bei unlogischen Stop-Loss-Werten (z.B. Stop > Entry für Long) mit Option zum Überschreiben.",manage_stoploss.py
+F-PM-180,Integration,DataFetcher Schnittstelle,Das Skript muss aktuelle Marktpreise über den py_datafetcher Dienst beziehen.,service.py
+F-PM-190,UX,Marktpreis Anzeige,"Die Listenansicht muss eine Spalte 'Price' enthalten, die den aktuellsten Preis aus dem Cache anzeigt.",manage_stoploss.py
+F-PM-200,UX,Marktdaten Update,Manueller Trigger für Preis-Update via py_datafetcher aus dem Menü heraus.,manage_stoploss.py
+F-PM-210,UX,Visualisierung Fetching,Fetching-Prozess wird durch farbige Symbole und Echtzeit-Streaming visualisiert.,manage_stoploss.py
+F-PM-220,Input,Robuste Dezimal-Arithmetik,Akzeptanz von Punkt und Komma als Dezimaltrenner bei allen Benutzereingaben.,manage_stoploss.py
+F-PM-230,Calculation,Unrealized P&L,"Berechnung von Gewinn/Verlust absolut und in Prozent (Marktpreis vs. Einstand).",service.py
+F-PM-240,Calculation,R-Multiple,"Das R-Multiple (P&L / Initial Risk) wird für jede Position mit Risiko berechnet.",service.py
+F-PM-250,Output,Portfolio Summen,Gesamtsummen für Investiertes Kapital (Marktwert) und nicht realisierte G+V.,service.py
+F-PM-260,Output,Journal Integration,"Kennzahlen Equity, Buying Power (Cash) und Invested werden aus journal.csv gelesen.",service.py
+F-PM-270,Architecture,Service Entkopplung,Geschäftslogik ist in PortfolioService gekapselt; Datenaustausch via DTOs.,service.py
+F-PM-280,UX,Bunte Formatierung,Nutzung von ANSI-Farben für Performance und Status-Flags (Grün/Gelb/Rot).,manage_stoploss.py
+F-PM-290,Dashboard,Interaktive Übersicht,Grafische und tabellarische Darstellung im Streamlit-Dashboard.,portfolio_overview.py
+F-PM-300,Dashboard,Interactive Data Editing,Stop-Loss Werte können direkt im Dashboard-Editor geändert und gespeichert werden.,portfolio_overview.py
+F-PM-330,Metrics,Minervini Kennzahlen,"System berechnet 'Days held' (Time-Stop), 'Pos %' (Exposure) und 'Risk %' (Equity Risk).",service.py
+F-PM-350,Configuration,Zentrale Risikoeinstellungen,Handels-Parameter (Risiko-Standard, Time-Threshold, Fees) aus 'data_risksettings.csv' laden.,service.py
+F-PM-360,UX,Emoji Status Diagnose,"Positionen werden diagnostiziert: 🟢 Profit, 🟡 Loss, 🔴 Broken, ⏳ Time-Stop, ⚠️ No-Stop.",manage_stoploss.py
+F-MSM-010,Architecture,Single Class Module,Eigenständige Klasse (MinerviniSizer) für die Sizing-Logik (Live/Paper nutzbar).,-
+F-MSM-020,Configuration,Risk Settings Integration,Nutzung von target_exposure_pct, default_fee, max_pos_size_pct aus data_risksettings.csv.,-
+F-MSM-030,Logic,Step 1: Portfolio Status,Abfrage Equity/Exposure. Defaults aus Live-Daten sind vom User überschreibbar.,-
+F-MSM-040,Logic,Target Exposure Calculation,Berechnung des verfügbaren Budgets basierend auf Target Exposure %.,-
+F-MSM-050,Logic,Step 2: Trade Params,Abfrage von Symbol, Entry, Stop. Risk%, MaxSize% und Fee Defaults aus Settings.,-
+F-MSM-060,Calculation,Limit 1: Risk-Based,Stückzahl = (Equity * Risk% - 2*OneWayFee) / (Entry - Stop).,-
+F-MSM-070,Calculation,Limit 2: Budget-Based,Limitierung der Stückzahl durch verbleibendes Exposure-Budget.,-
+F-MSM-080,Calculation,Limit 3: Size-Cap,Limitierung durch maximale Positionsgröße (z.B. max. 25% Equity).,-
+F-MSM-090,Logic,Step 3: The Funnel,Ermittlung des Minimums aus Risiko-, Budget- und Size-Limit als Vorschlagswert.,-
+F-MSM-100,UX,Manual Override,Manuelle Korrektur des vorgeschlagenen Engpass-Wertes durch den Benutzer.,-
+F-MSM-110,Output,Step 4: Scenario Summary,Zusammenfassung inkl. neuem Exposure %, Risiko an Equity und R-Zielen.,-
+F-MSM-120,UX,Wizard Flow,Geführter Dialog-Wizard (Schritt 1-4) im CLI mit Trennlinien nach Mockup.,-
+F-MSM-130,UX,Dual Wizard Mode,Unterstützung für 'Minervini Wizard (Live)' und 'Minervini Wizard (Paper)' im Paper-Menü.,manage_stoploss.py
+F-MSM-140,Data,Dynamic Metrics Source,Der Wizard lädt Basisdaten (Equity/Exposure) wahlweise aus dem Live-Journal oder dem Paper-Bestand.,sizer.py
+F-MSM-150,Persistence,Paper Journal Storage,Metriken für das Paper-Portfolio werden in 'paper_journal.csv' persistent gespeichert.,service.py
+F-MSM-160,UX,Editiere Paper Metriken,Der Nutzer kann Equity und Exposure für das Paper-Portfolio manuell über das CLI-Menü anpassen und speichern.,manage_stoploss.py

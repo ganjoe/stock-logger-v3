@@ -1,57 +1,50 @@
 import os
-import sys
-
-# Add project root to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
-
+import unittest
 from py_manage_portfolio.service import PortfolioService
 
-def test_service():
-    print("Testing PortfolioService...")
-    service = PortfolioService(project_root=".")
-    
-    print("\nFetching open positions...")
-    positions = service.get_open_positions(update_prices=False)
-    print(f"Found {len(positions)} open positions.")
-    
-    if positions:
-        p = positions[0]
-        print(f"Sample Position: {p.symbol} ({p.direction})")
-        print(f"  Qty: {p.quantity}, Entry: {p.entry_price}, Mkt: {p.current_price}")
-        print(f"  Unreal PL: {p.unrealized_pl} ({p.unrealized_pct}%)")
-        print(f"  Flags: {p.status_flags}")
+class TestPortfolioRiskSettings(unittest.TestCase):
+    def setUp(self):
+        self.project_root = os.path.dirname(os.path.abspath(__file__))
+        self.settings_file = os.path.join(self.project_root, "data_risksettings.csv")
+        self.service = PortfolioService(self.project_root, context="live")
 
-    print("\nFetching summary...")
-    summary = service.get_summary()
-    print(f"Summary Metrics:")
-    print(f"  Total Invested: {summary.total_invested}")
-    print(f"  Buying Power: {summary.buying_power}")
-    print(f"  Equity: {summary.equity}")
-    print(f"  Status: {summary.count_ok} OK, {summary.count_trail} Trail, {summary.count_missing} Missing")
+    def test_load_default_settings(self):
+        """Tests if default settings are loaded when file is missing."""
+        if os.path.exists(self.settings_file):
+            os.rename(self.settings_file, self.settings_file + ".bak")
+        
+        try:
+            settings = self.service.get_risk_settings()
+            self.assertEqual(settings["holding_threshold"], 30)
+            self.assertEqual(settings["default_risk_pct"], 1.0)
+            self.assertEqual(settings["max_equity_risk"], 1.25)
+        finally:
+            if os.path.exists(self.settings_file + ".bak"):
+                os.rename(self.settings_file + ".bak", self.settings_file)
 
-    # BI-DIRECTIONAL TEST
-    if positions:
-        target = positions[0].symbol
-        print(f"\n--- Testing Bi-Directional API for {target} ---")
+    def test_load_custom_settings(self):
+        """Tests if custom settings are correctly parsed from CSV."""
+        with open(self.settings_file + ".test", "w", encoding="utf-8") as f:
+            f.write("Key;Value;Description\n")
+            f.write("holding_threshold;45;Test\n")
+            f.write("default_risk_pct;0,5;Test\n")
+            f.write("max_equity_risk;2.0;Test\n")
         
-        # 1. Update
-        new_stop = positions[0].entry_price * 0.95
-        print(f"Updating stop for {target} to {new_stop:.2f}...")
-        res = service.update_stop_loss(target, new_stop)
-        print(f"Update Result: {res}")
+        if os.path.exists(self.settings_file):
+            os.rename(self.settings_file, self.settings_file + ".original")
         
-        # 2. Verify
-        updated_pos = [p for p in service.get_open_positions() if p.symbol == target][0]
-        print(f"Verified Stop: {updated_pos.stop_loss} (Expected: {new_stop:.2f})")
+        os.rename(self.settings_file + ".test", self.settings_file)
         
-        # 3. Delete
-        print(f"Deleting stop for {target}...")
-        res = service.delete_stop_loss(target)
-        print(f"Delete Result: {res}")
-        
-        # 4. Final check
-        final_pos = [p for p in service.get_open_positions() if p.symbol == target][0]
-        print(f"Final Status: {final_pos.status_flags} (Expected: Missing if it was OK before)")
+        try:
+            settings = self.service.get_risk_settings()
+            self.assertEqual(settings["holding_threshold"], 45)
+            self.assertEqual(settings["default_risk_pct"], 0.5)
+            self.assertEqual(settings["max_equity_risk"], 2.0)
+        finally:
+            if os.path.exists(self.settings_file + ".original"):
+                os.rename(self.settings_file + ".original", self.settings_file)
+            elif os.path.exists(self.settings_file):
+                os.remove(self.settings_file)
 
 if __name__ == "__main__":
-    test_service()
+    unittest.main()

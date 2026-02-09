@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "stock-logger-v3",
+			"path": "../.."
+		},
+		{
+			"name": "py_dashboard",
+			"path": "../../../stock-logger-dashboard/py_dashboard"
+		}
+	],
+	"settings": {}
+}

@@ -1,6 +1,6 @@
 ID,Category,Title,Description,Covered By
 ICD-PM-API-010,Python Interface,Service Class,Das Modul muss eine Klasse 'PortfolioService' exportieren (in py_manage_portfolio.service), die als zentrale Schnittstelle dient.,-
-ICD-PM-DMO-010,Data Model,Position DTO,Es muss eine Datenklasse 'PortfolioPosition' geben mit Feldern: symbol, quantity (float), entry_price, current_price, market_value, unrealized_pl, unrealized_pct, stop_loss, initial_risk, r_multiple, is_valid (bool).,-
+ICD-PM-DMO-010,Data Model,Position DTO,"Es muss eine Datenklasse 'PortfolioPosition' geben mit Feldern: symbol, quantity, entry_price, current_price, market_value, unrealized_pl, unrealized_pct, stop_loss, initial_risk, r_multiple, entry_date, days_held, is_valid, status_flags, pos_pct, risk_pct, dist_pct.",-
 ICD-PM-DMO-020,Data Model,Summary DTO,Es muss eine Datenklasse 'PortfolioSummary' geben mit Feldern: total_invested, total_unrealized_pl, total_risk, buying_power, equity.,-
 ICD-PM-API-020,Method,Get Positions,"Methode 'get_open_positions(update_prices=False) -> List[PortfolioPosition]'. Liefert eine Liste aller offenen Positionen mit berechneten Kennzahlen.",-
 ICD-PM-API-030,Method,Get Summary,"Methode 'get_summary() -> PortfolioSummary'. Liefert die aggregierten Finanzdaten (inkl. Journal-Daten wie Cash/Equity).",-
@@ -8,6 +8,14 @@ ICD-PM-API-040,Integration,Price Fetching,"Die 'get_open_positions' Methode nutz
 ICD-PM-API-050,Compatibility,UI Separation,"Die bestehende CLI (manage_stoploss.py) muss so refactored werden, dass sie nur noch diesen Service aufruft und die Ergebnisse darstellt, statt selbst zu rechnen.",-
 ICD-PM-FIL-010,File IO,Input Sources,"Der Service liest und parst intern 'trades.xml' (für Positionen), 'manual_risk_data.json' (für Stops) und 'journal.csv' (für Equity/Cash). Der Aufrufer muss keine Dateien hantieren.",-
 ICD-PM-API-060,API,Update Stop-Loss,"Methode 'update_stop_loss(symbol, new_stop) -> bool'. Findet intern die offene Position, führt Validierung durch, berechnet 'initial_risk' neu und speichert persistent.",-
-ICD-PM-API-070,API,Delete Stop-Loss,"Methode 'delete_stop_loss(symbol) -> bool'. Entfernt den Risikodatensatz für das angegebene Symbol aus der manual_risk_data.json.",-
+ICD-PM-API-070,API,Delete Stop-Loss (Obsolet),"Methode 'delete_stop_loss(symbol)'. Funktionell ersetzt durch update_stop_loss(symbol, 0.0).",-
 ICD-PM-VAL-010,Validation,Write Validation,Der Service validiert bei Schreibvorgängen die Stop-Distanz und Logik (z.B. Stop < Entry für Long).,-
 ICD-PM-FIL-030,Persistence,Risk Data Mapping,Der Service kapselt die Mapping-Logik zwischen dem einfachen 'symbol' (API) und dem internen Dateiformat 'SYMBOL_DATE' (Persistenz).,-
+ICD-PM-API-080,API,Get Risk Settings,"Methode 'get_risk_settings() -> Dict'. Liefert die konfigurierten Schwellenwerte für das Handels-Setup.",-
+ICD-PM-FIL-040,File IO,Risk Settings Source,Der Service liest 'data_risksettings.csv' als Quelle für globale Strategieparameter.,-
+ICD-MSM-API-010,Python Interface,Sizing Module,"Es muss eine Klasse 'MinerviniSizer' geben (in py_manage_portfolio.sizer), die die Sizing-Logik kapselt.",-
+ICD-MSM-DMO-010,Data Model,SizingContext DTO,Datenklasse für den Portfoliostatus (equity current_exposure target_exposure_pct available_budget).,-
+ICD-MSM-DMO-020,Data Model,TradeParameters DTO,Datenklasse für Trade-Eingaben (symbol entry_price stop_loss risk_pct max_position_pct one_way_fee).,-
+ICD-MSM-DMO-030,Data Model,SizingResult DTO,Datenklasse für das Ergebnis (limits suggested shares bottleneck metrics scenarios warnings).,-
+ICD-MSM-API-020,Method,Calculate Sizing,"Methode 'calculate_sizing(context, params) -> SizingResult'. Führt die Trichter-Berechnung basierend auf den DTOs durch.",-
+ICD-MSM-API-030,Method,Wallet Context,"Methode 'calculate_wallet_context(equity, exposure, target_pct) -> SizingContext'. Berechnet das verfügbare Budget.",-

@@ -1,5 +1,14 @@
 import streamlit as st
 import pandas as pd
+import sys
+import os
+from pathlib import Path
+
+# Add project root to sys.path to allow sibling imports
+project_root = str(Path(__file__).parent.parent.resolve())
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 from data_loader import load_data
 from focus_input import render_focus_input
 
@@ -10,9 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-import os
-
-                    # --- Load CSS ---
+# --- Load CSS ---
 def local_css(file_name):
     # Construct absolute path relative to this script
     script_dir = os.path.dirname(__file__)
@@ -55,14 +62,17 @@ render_reality_check(df, df_focus, account_summary)
 from charts import render_charts_section
 render_charts_section(df_focus, mode)
 
-# 4. Heatmap
+# 4. Portfolio Overview (Open Positions & Stop Management)
+from portfolio_overview import render_portfolio_overview
+render_portfolio_overview()
+
+# 5. Heatmap
 from heatmap import render_heatmap
 render_heatmap(df)
 
 
 # --- Sidebar Import ---
 from workflow_manager import WorkflowManager, ProcessResult
-from pathlib import Path
 import time
 
 st.sidebar.markdown("---")
