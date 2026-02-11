@@ -23,6 +23,7 @@ class OrderStatus(Enum):
     SUBMITTED = "Submitted"
     FILLED = "Filled"
     CANCELLED = "Cancelled"
+    PENDING_CANCEL = "PendingCancel"
     UNKNOWN = "Unknown"
 
 
@@ -86,6 +87,16 @@ class OrderManager(ABC):
     @abstractmethod
     def get_open_orders(self, symbol: Optional[str] = None) -> List[OpenOrder]:
         """Get all open orders, optionally filtered by symbol."""
+        pass
+    
+    @abstractmethod
+    def modify_order(self, order_id: str, quantity: Optional[float] = None, 
+                     limit_price: Optional[float] = None, 
+                     stop_price: Optional[float] = None) -> bool:
+        """
+        Modifies an existing order.
+        Returns True if the modification was successful.
+        """
         pass
 
 

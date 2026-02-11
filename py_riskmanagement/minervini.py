@@ -24,7 +24,7 @@ class MinerviniSizer(RiskStrategy):
             "max_pos_size_pct": 25.0,
             "default_fee": 2.0
         }
-        path = os.path.join(self.project_root, "data_risksettings.csv")
+        path = os.path.join(self.project_root, "py_riskmanagement", "data", "data_risksettings.csv")
         if os.path.exists(path):
             try:
                 with open(path, 'r', encoding='utf-8') as f:

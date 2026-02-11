@@ -82,8 +82,12 @@ class PortfolioService:
             if symbol in cached.positions:
                 old_pos = cached.positions[symbol]
                 # Preserve manual metadata if missing in broker data
-                if new_pos.stop_loss is None or new_pos.stop_loss == 0:
-                    new_pos.stop_loss = old_pos.stop_loss
+                # Always merge metadata if price matches or broker has no stop
+                if old_pos.stop_loss and (new_pos.stop_loss is None or new_pos.stop_loss == 0 or abs(new_pos.stop_loss - old_pos.stop_loss) < 0.05):
+                    new_pos.stop_type = getattr(old_pos, 'stop_type', 'STP')
+                    new_pos.stop_limit_price = getattr(old_pos, 'stop_limit_price', None)
+                    if new_pos.stop_loss is None or new_pos.stop_loss == 0:
+                        new_pos.stop_loss = old_pos.stop_loss
                 if not new_pos.isin:
                     new_pos.isin = old_pos.isin
                 if not new_pos.entry_date:
@@ -250,26 +254,90 @@ class PortfolioService:
              self.state = self._data_source.get_portfolio_state()
         return self.get_positions()
 
-    def update_stop_loss(self, symbol: str, stop_loss: float):
+    def update_stop_loss(self, symbol: str, stop_loss: float, 
+                        stop_type: str = "STP", limit_price: Optional[float] = None):
         """Updates stop loss for a position and persists to local snapshot."""
         if not self.state: self.load_portfolio_state()
         
         if symbol in self.state.positions:
             pos = self.state.positions[symbol]
             pos.stop_loss = stop_loss 
+            pos.stop_type = stop_type
+            pos.stop_limit_price = limit_price
             
             # Recalculate initial risk if it's the first time setting a stop
             if not pos.initial_risk or pos.initial_risk == 0:
                 pos.initial_risk = abs(pos.entry_price - stop_loss) * pos.quantity
             
-            # Persist
+            # 1. Persist locally (always)
             snapshot_name = "data_portfolio_live_snapshot.json" if self.context == "live" else "data_portfolio_simulation.json"
             self.storage.save_portfolio(self.state, snapshot_name)
             
+            # 2. Synchronize with Broker (if Live)
+            from .data_source import OrderManager, OrderRequest
+            if self.context == "live" and self.is_broker_connected() and isinstance(self._data_source, OrderManager):
+                print(f"📡 Syncing {stop_type} for {symbol} with Broker...")
+                ds = self._data_source
+                
+                try:
+                    # Cancel existing stops for this symbol
+                    open_orders = ds.get_open_orders(symbol=symbol)
+                    for o in open_orders:
+                        if o.order_type in ['STP', 'STP LMT', 'TRAIL']:
+                            print(f"   Cancelling existing stop order {o.order_id}...")
+                            ds.cancel_order(o.order_id)
+                    
+                    # Place new stop order
+                    action = "SELL" if pos.direction == "LONG" else "BUY"
+                    req = OrderRequest(
+                        symbol=symbol,
+                        action=action,
+                        quantity=pos.quantity,
+                        order_type=stop_type,
+                        limit_price=limit_price,
+                        stop_price=stop_loss,
+                        time_in_force="GTC"
+                    )
+                    
+                    new_id = ds.place_order(req)
+                    if new_id:
+                        print(f"   ✅ Live {stop_type} placed! ID: {new_id}")
+                    else:
+                        print(f"   ❌ Failed to place live {stop_type} order.")
+                        
+                except Exception as e:
+                    print(f"   ❌ Error syncing stop with broker: {e}")
+
             if self.context == "live":
                 print(f"✓ Stop Loss for {symbol} saved to local snapshot.")
-            else:
-                print(f"✓ Stop Loss for {symbol} updated in Simulation.")
+
+    def remove_stop_loss(self, symbol: str):
+        """Removes stop loss for a position and cancels corresponding broker orders."""
+        if not self.state: self.load_portfolio_state()
+        
+        if symbol in self.state.positions:
+            pos = self.state.positions[symbol]
+            pos.stop_loss = 0.0
+            
+            # 1. Persist locally
+            snapshot_name = "data_portfolio_live_snapshot.json" if self.context == "live" else "data_portfolio_simulation.json"
+            self.storage.save_portfolio(self.state, snapshot_name)
+            
+            # 2. Synchronize with Broker (if Live)
+            from .data_source import OrderManager
+            if self.context == "live" and self.is_broker_connected() and isinstance(self._data_source, OrderManager):
+                print(f"📡 Removing Stop Loss for {symbol} at Broker...")
+                ds = self._data_source
+                try:
+                    open_orders = ds.get_open_orders(symbol=symbol)
+                    for o in open_orders:
+                        if o.order_type in ['STP', 'STP LMT', 'TRAIL']:
+                            print(f"   Cancelling existing stop order {o.order_id}...")
+                            ds.cancel_order(o.order_id)
+                except Exception as e:
+                    print(f"   ❌ Error cancelling stop with broker: {e}")
+            
+            print(f"✓ Stop Loss for {symbol} removed.")
 
     def delete_position_sim(self, symbol: str):
         """Deletes a position in Simulation mode."""

@@ -15,8 +15,8 @@ import json
 ###############################################################################
 """
 
-XML_FILE = "trades.xml"
-TICKER_MAP_FILE = "ticker_map.json"
+XML_FILE = os.path.join("data", "trades.xml")
+TICKER_MAP_FILE = os.path.join("py_datafetcher", "config", "ticker_map.json")
 
 def get_file_path():
     """CLI argument parsing & Auto-discovery."""
@@ -357,7 +357,7 @@ def main():
         print("-> No new data found (already imported).")
     
     # Always move processed file to oldcsv directory (S-IO-100, F-080)
-    old_csv_dir = "oldcsv"
+    old_csv_dir = os.path.join("data", "oldcsv")
     if not os.path.exists(old_csv_dir):
         os.makedirs(old_csv_dir)
     

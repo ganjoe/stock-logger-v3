@@ -6,7 +6,8 @@ from .data_models import AppConfig, ProviderConfig, ProviderType
 
 logger = logging.getLogger(__name__)
 
-def load_config(config_path: str = "providers.json", isin_map_path: str = "isin_map.json") -> AppConfig:
+def load_config(config_path: str = os.path.join("py_datafetcher", "config", "providers.json"), 
+                isin_map_path: str = os.path.join("py_datafetcher", "config", "ticker_map.json")) -> AppConfig:
     """ 
     Loads provider settings and ISIN map. 
     Validates basic structure and ensures market data directory exists.

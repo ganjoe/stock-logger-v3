@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 import logging
@@ -19,8 +20,8 @@ logging.basicConfig(
 
 def main():
     parser = argparse.ArgumentParser(description="Portfolio History Analyzer")
-    parser.add_argument("--input", default="trades.xml", help="Input XML file (default: trades.xml)")
-    parser.add_argument("--output", default="journal.csv", help="Output CSV file (default: journal.csv)")
+    parser.add_argument("--input", default=os.path.join("data", "trades.xml"), help="Input XML file (default: data/trades.xml)")
+    parser.add_argument("--output", default=os.path.join("data", "journal.csv"), help="Output CSV file (default: data/journal.csv)")
     args = parser.parse_args()
 
     logging.info("Starting Portfolio History Analysis...")

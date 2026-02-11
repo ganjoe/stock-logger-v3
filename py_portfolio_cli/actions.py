@@ -1,11 +1,9 @@
-"""
-CLI Action Handlers.
-Each function handles a specific user action from the menu system.
-"""
+import time
 from py_manage_portfolio.service import PortfolioService
 
 from .utils import clear_terminal, prompt_stop_loss, parse_input_decimal
 from .formatter import render_dashboard
+from .logger import append_trade_log
 from py_manage_portfolio.data_source import OrderManager, OrderRequest, OrderStatus
 
 # --- Order Functions ---
@@ -87,6 +85,8 @@ def action_place_order(service: PortfolioService):
             order_id = ds.place_order(req)
             if order_id:
                 print(f" ✅ Order erfolgreich übermittelt! ID: {order_id}")
+                # Log the trade to CSV
+                append_trade_log(service, req, order_id)
             else:
                 print(" ❌ Order konnte nicht platziert werden (keine ID zurückerhalten).")
         except Exception as e:
@@ -98,31 +98,98 @@ def action_place_order(service: PortfolioService):
 
 
 def action_show_open_orders(service: PortfolioService):
-    """List open orders from broker."""
+    """List open orders from broker and allow cancellation."""
     ds = service.get_data_source()
     if not ds or not isinstance(ds, OrderManager) or not service.is_broker_connected():
         print("\n❌ Kein Broker verbunden.")
         input("Enter...")
         return
         
-    print("\n--- 📋 Offene Orders ---")
-    try:
-        orders = ds.get_open_orders()
-        if not orders:
-            print("  Keine offenen Orders.")
-        else:
-            print(f"{'ID':<10} {'Sym':<6} {'Action':<4} {'Qty':>6} {'Type':<7} {'Lmt/Stp':<10} {'Status':<10}")
-            print("-" * 60)
-            for o in orders:
+    while True:
+        clear_terminal()
+        print("\n--- 📋 Offene Orders ---")
+        try:
+            orders = ds.get_open_orders()
+            if not orders:
+                print("  Keine offenen Orders.")
+                input("\nEnter...")
+                return
+            
+            print(f"{'Nr':<3} {'ID':<10} {'Sym':<6} {'Action':<4} {'Qty':>6} {'Type':<7} {'Lmt/Stp':<10} {'Status':<10}")
+            print("-" * 65)
+            for i, o in enumerate(orders, 1):
                 price_info = ""
                 if o.limit_price: price_info += f"L:{o.limit_price} "
                 if o.stop_price: price_info += f"S:{o.stop_price}"
                 
-                print(f"{o.order_id:<10} {o.symbol:<6} {o.action:<4} {o.quantity:>6.0f} {o.order_type:<7} {price_info:<10} {o.status.value:<10}")
-    except Exception as e:
-        print(f"Fehler beim Laden der Orders: {e}")
-    
-    input("\nEnter zum Fortfahren...")
+                print(f"[{i:<1}] {o.order_id:<10} {o.symbol:<6} {o.action:<4} {o.quantity:>6.0f} {o.order_type:<7} {price_info:<10} {o.status.value:<10}")
+            
+            print("-" * 65)
+            print("  Wähle [Nr] zum STORNIEREN oder [b] für Zurück.")
+            choice = input("\nAuswahl: ").strip().lower()
+            
+            if choice == 'b':
+                return
+            
+            try:
+                idx = int(choice)
+                if 1 <= idx <= len(orders):
+                    target = orders[idx-1]
+                    
+                    print(f"\n  --- Order {target.order_id} ({target.action} {target.symbol}) ---")
+                    print("  [1] ❌ Stornieren (Löschen)")
+                    print("  [2] ✏️  Ändern (Preis/Menge)")
+                    print("  [0] Zurück")
+                    sub_choice = input("  Auswahl: ").strip()
+                    
+                    if sub_choice == '1':
+                        confirm = input(f"  Wirklich stornieren? [y/N]: ").strip().lower()
+                        if confirm == 'y':
+                            print(f"  Sende Stornierung...")
+                            if ds.cancel_order(target.order_id):
+                                print("  ✅ Stornierung angefordert.")
+                                time.sleep(1)
+                            else:
+                                print("  ❌ Stornierung fehlgeschlagen.")
+                                input("Enter...")
+                    
+                    elif sub_choice == '2':
+                        print(f"\n  --- Order Ändern (leer lassen = unverändert) ---")
+                        
+                        # Menge
+                        qty_str = input(f"  Neue Menge [{target.quantity}]: ").strip()
+                        new_qty = float(qty_str) if qty_str else target.quantity
+                        
+                        # Preise
+                        new_lmt = target.limit_price
+                        if target.limit_price:
+                            lmt_str = input(f"  Neuer Limit-Preis [{target.limit_price}]: ").strip()
+                            new_lmt = float(lmt_str) if lmt_str else target.limit_price
+                            
+                        new_stp = target.stop_price
+                        if target.stop_price:
+                            stp_str = input(f"  Neuer Stop-Preis [{target.stop_price}]: ").strip()
+                            new_stp = float(stp_str) if stp_str else target.stop_price
+                            
+                        print(f"  Sende Änderung: Qty={new_qty}, Lmt={new_lmt}, Stp={new_stp}...")
+                        if ds.modify_order(target.order_id, quantity=new_qty, limit_price=new_lmt, stop_price=new_stp):
+                            print("  ✅ Änderung erfolgreich übermittelt.")
+                            time.sleep(1)
+                        else:
+                            print("  ❌ Änderung fehlgeschlagen.")
+                            input("Enter...")
+                else:
+                    print("  Ungültige Nummer.")
+                    time.sleep(1)
+            except ValueError:
+                if choice != 'b':
+                    print("  Ungültige Eingabe.")
+                    time.sleep(1)
+
+        except Exception as e:
+            print(f"Fehler bei den Orders: {e}")
+            input("Enter...")
+            return
 
 
 
@@ -150,9 +217,15 @@ def action_manage_stops(service: PortfolioService):
             
             new_stop = prompt_stop_loss(target.symbol, target.direction, target.entry_price, current_stop)
             
-            if new_stop is not None:
-                service.update_stop_loss(target.symbol, new_stop)
-                print(f"  ✓ Stop für {target.symbol} auf {new_stop} gesetzt.")
+            if new_stop == "REMOVE":
+                service.remove_stop_loss(target.symbol)
+                render_dashboard(service)
+                input("\nEingabe zum Fortfahren...")
+            elif new_stop is not None:
+                # new_stop is a tuple: (stop_trigger, stop_type, limit_price)
+                trigger, s_type, lmt = new_stop
+                service.update_stop_loss(target.symbol, trigger, stop_type=s_type, limit_price=lmt)
+                print(f"  ✓ {s_type} für {target.symbol} auf {trigger} gesetzt.")
                 render_dashboard(service)
                 input("\nEingabe zum Fortfahren...")
                 
@@ -327,11 +400,10 @@ def _connect_to_broker(service: PortfolioService):
         print("⚠ Ungültiger Port.")
         return
     
-    # Use random Client ID (100-999) to avoid conflicts
-    import random
-    client_id = random.randint(100, 999)
+    # Use Master Client ID (0) exclusively as per user request
+    client_id = 0
     
-    print(f"\nVerbinde zu {host}:{port} (Client ID: {client_id})...")
+    print(f"\nVerbinde zu {host}:{port} (Master Client ID: {client_id})...")
     
     try:
         new_source = BrokerDataSource(

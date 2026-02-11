@@ -30,7 +30,7 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
         auto_connect: If True, connect immediately on init
     """
     
-    def __init__(self, host: str = "127.0.0.1", port: int = 7497, client_id: int = 1,
+    def __init__(self, host: str = "127.0.0.1", port: int = 7497, client_id: int = 0,
                  account_id: Optional[str] = None, auto_connect: bool = True):
         config = ConnectionConfig(host=host, port=port, client_id=client_id)
         self._connection = IBKRConnection(config)
@@ -42,7 +42,16 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
             self._connection.ib.reqMarketDataType(3)
             # Request all open orders (including those manually placed in TWS)
             self._connection.ib.reqAllOpenOrders()
-            self._connection.ib.reqAutoOpenOrders(True)
+            try:
+                self._connection.ib.reqAutoOpenOrders(True)
+            except Exception as e:
+                # This fails if client_id != 0, but it's not fatal
+                print(f"ℹ️ Could not enable auto-bind for orders: {e}")
+    
+    @property
+    def port(self) -> int:
+        """Returns the connection port."""
+        return self._connection.config.port
     
     def _get_account(self) -> str:
         """Get the account ID to use for API calls."""
@@ -142,6 +151,8 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
     def _get_active_stops(self) -> Dict[str, float]:
         """Fetch active stop orders (STP, STP LMT, TRAIL) keyed by symbol."""
         ib = self._connection.ib
+        # Refresh from other clients
+        ib.reqAllOpenOrders()
         stops = {}
         trades = ib.openTrades()
         
@@ -169,6 +180,8 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
     def get_open_orders(self, symbol: Optional[str] = None) -> List[OpenOrder]:
         """Get all open orders from IBKR."""
         ib = self._connection.ib
+        # Refresh orders from other clients (crucial if auto-bind failed)
+        ib.reqAllOpenOrders()
         trades = ib.openTrades()
         
         result = []
@@ -193,10 +206,16 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
                 status = OrderStatus.FILLED
             elif status_str in ('Cancelled', 'ApiCancelled', 'Inactive'): 
                 status = OrderStatus.CANCELLED
+            elif status_str == 'PendingCancel':
+                status = OrderStatus.PENDING_CANCEL
             else:
                 print(f"⚠️ Unknown IBKR Order Status: {status_str}")
                 status = OrderStatus.UNKNOWN
             
+            # Order ID: In Client ID 0 world, we use orderId if > 0, otherwise permId.
+            # We don't need 'p' prefix anymore as Client 0 sees everything uniformly.
+            display_id = str(order.orderId) if order.orderId != 0 else str(order.permId)
+
             result.append(OpenOrder(
                 symbol=contract.symbol,
                 order_type=order.orderType,
@@ -207,7 +226,7 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
                 limit_price=lmt_price,
                 stop_price=stp_price,
                 time_in_force=order.tif,
-                order_id=str(order.orderId)
+                order_id=display_id
             ))
         
         return result
@@ -250,18 +269,20 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
             return None
 
     def cancel_order(self, order_id: str) -> bool:
-        """Cancels an order by ID."""
+        """Cancels an order by ID (supports session orderId or permId)."""
         ib = self._connection.ib
         try:
             target_trade = None
             for trade in ib.openTrades():
-                if str(trade.order.orderId) == str(order_id):
+                # Check permId
+                if str(trade.order.permId) == str(order_id):
                     target_trade = trade
                     break
             
             if not target_trade:
+                # Secondary check in all orders if not found in openTrades
                 for order in ib.orders():
-                     if str(order.orderId) == str(order_id):
+                     if str(order.orderId) == str(order_id) or str(order.permId) == str(order_id):
                          ib.cancelOrder(order)
                          return True
                 return False
@@ -270,6 +291,41 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
             return True
         except Exception as e:
             print(f"Error cancelling order: {e}")
+            return False
+
+    def modify_order(self, order_id: str, quantity: Optional[float] = None, 
+                     limit_price: Optional[float] = None, 
+                     stop_price: Optional[float] = None) -> bool:
+        """Modifies an existing order."""
+        ib = self._connection.ib
+        try:
+            target_trade = None
+            for trade in ib.openTrades():
+                if str(trade.order.permId) == str(order_id) or str(trade.order.orderId) == str(order_id):
+                    target_trade = trade
+                    break
+            
+            if not target_trade:
+                print(f"Error modifying order: Order {order_id} not found in open trades.")
+                return False
+            
+            # Update fields
+            order = target_trade.order
+            contract = target_trade.contract
+            
+            if quantity is not None:
+                order.totalQuantity = quantity
+            if limit_price is not None:
+                order.lmtPrice = limit_price
+            if stop_price is not None:
+                order.auxPrice = stop_price
+                
+            # Calling placeOrder with the SAME order object updates it in IBKR
+            ib.placeOrder(contract, order)
+            return True
+            
+        except Exception as e:
+            print(f"Error modifying order: {e}")
             return False
 
 

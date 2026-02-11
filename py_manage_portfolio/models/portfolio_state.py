@@ -39,6 +39,8 @@ class Position:
     
     # Risk (persisted)
     stop_loss: Optional[float] = None
+    stop_limit_price: Optional[float] = None
+    stop_type: str = "STP"              # "STP" (Market) or "STP LMT" (Limit)
     initial_risk: Optional[float] = None
     
     # Injected by Service (not persisted in JSON, set after loading)

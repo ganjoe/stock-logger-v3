@@ -1,235 +1,26 @@
 {
-    "timestamp": "2026-02-11T01:41:55.476335",
-    "cash": 11582.04,
-    "equity": 12487.94,
+    "timestamp": "2026-02-11T22:10:42.636773",
+    "cash": 10000.0,
+    "equity": 10000.0,
     "positions": {
-        "AVAV": {
-            "symbol": "AVAV",
-            "quantity": 1.0,
-            "entry_price": 333.42,
-            "current_price": 263.980011,
+        "AAPL": {
+            "symbol": "AAPL",
+            "quantity": 10,
+            "entry_price": 150.0,
+            "current_price": 160.0,
             "currency": "USD",
             "isin": null,
             "entry_date": null,
             "direction": "LONG",
-            "stop_loss": 252.25,
-            "initial_risk": 81.17000000000002,
+            "stop_loss": 140.0,
+            "stop_limit_price": 139.0,
+            "stop_type": "STP LMT",
+            "initial_risk": 100.0,
             "days_held": 0,
-            "pos_pct": 2.1138795589985215,
-            "risk_pct": 0.09393071235127642,
-            "dist_pct": 4.443522430188849,
-            "status_flags": [
-                "\u26a0Loss"
-            ]
-        },
-        "BA": {
-            "symbol": "BA",
-            "quantity": 1.0,
-            "entry_price": 250.76,
-            "current_price": 242.72999575,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": 240.29,
-            "initial_risk": 10.469999999999999,
-            "days_held": 0,
-            "pos_pct": 1.9437152624852456,
-            "risk_pct": 0.019538817050690573,
-            "dist_pct": 1.0052304176337088,
-            "status_flags": [
-                "\u26a0Loss"
-            ]
-        },
-        "FCX": {
-            "symbol": "FCX",
-            "quantity": 10.0,
-            "entry_price": 60.055,
-            "current_price": 63.2900009,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": 61.72,
-            "initial_risk": 16.64999999999999,
-            "days_held": 0,
-            "pos_pct": 5.068089765005277,
-            "risk_pct": 0.12572136797582337,
-            "dist_pct": 2.4806460383539095,
-            "status_flags": [
-                "Trail"
-            ]
-        },
-        "HBM": {
-            "symbol": "HBM",
-            "quantity": 20.0,
-            "entry_price": 25.2685,
-            "current_price": 25.3899994,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": 24.8,
-            "initial_risk": 9.369999999999976,
-            "days_held": 0,
-            "pos_pct": 4.066323092519663,
-            "risk_pct": 0.09449106898335513,
-            "dist_pct": 2.323747199458382,
-            "status_flags": [
-                "OK"
-            ]
-        },
-        "NVDA": {
-            "symbol": "NVDA",
-            "quantity": 2.0,
-            "entry_price": 186.55,
-            "current_price": 188.91999815,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": 170.05,
-            "initial_risk": 33.0,
-            "days_held": 0,
-            "pos_pct": 3.0256391070104436,
-            "risk_pct": 0.30221154409774525,
-            "dist_pct": 9.988353977760182,
-            "status_flags": [
-                "OK"
-            ]
-        },
-        "QBTS": {
-            "symbol": "QBTS",
-            "quantity": 20.0,
-            "entry_price": 22.27,
-            "current_price": 20.44000055,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "SHORT",
-            "stop_loss": 24.36,
-            "initial_risk": 41.8,
-            "days_held": 0,
-            "pos_pct": 3.273558417160877,
-            "risk_pct": 0.627805618861077,
-            "dist_pct": 19.17807898493427,
-            "status_flags": [
-                "OK"
-            ]
-        },
-        "RKLB": {
-            "symbol": "RKLB",
-            "quantity": 7.0,
-            "entry_price": 90.15502855,
-            "current_price": 71.9700012,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": 70.82,
-            "initial_risk": 135.34519985000003,
-            "days_held": 0,
-            "pos_pct": 4.0342122752031155,
-            "risk_pct": 0.06446226038882344,
-            "dist_pct": 1.5978896496114072,
-            "status_flags": [
-                "\u26a0Loss"
-            ]
-        },
-        "TDW": {
-            "symbol": "TDW",
-            "quantity": 5.0,
-            "entry_price": 51.9081,
-            "current_price": 68.40000155,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": null,
-            "initial_risk": null,
-            "days_held": 0,
-            "pos_pct": 2.7386423040949905,
+            "pos_pct": null,
             "risk_pct": null,
             "dist_pct": null,
-            "status_flags": [
-                "\u274cNoStop"
-            ]
-        },
-        "TE": {
-            "symbol": "TE",
-            "quantity": 25.0,
-            "entry_price": 9.295,
-            "current_price": 7.5,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": 7.15,
-            "initial_risk": 53.624999999999986,
-            "days_held": 0,
-            "pos_pct": 1.5014485976069711,
-            "risk_pct": 0.07006760122165859,
-            "dist_pct": 4.666666666666662,
-            "status_flags": [
-                "\u26a0Loss"
-            ]
-        },
-        "TMDX": {
-            "symbol": "TMDX",
-            "quantity": 2.0,
-            "entry_price": 129.64,
-            "current_price": 139.0,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": null,
-            "initial_risk": null,
-            "days_held": 0,
-            "pos_pct": 2.2261477873852695,
-            "risk_pct": null,
-            "dist_pct": null,
-            "status_flags": [
-                "\u274cNoStop"
-            ]
-        },
-        "USAR": {
-            "symbol": "USAR",
-            "quantity": 2.0,
-            "entry_price": 27.62,
-            "current_price": 21.94000055,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": null,
-            "initial_risk": null,
-            "days_held": 0,
-            "pos_pct": 0.3513790192777992,
-            "risk_pct": null,
-            "dist_pct": null,
-            "status_flags": [
-                "\u274cNoStop"
-            ]
-        },
-        "XDEF": {
-            "symbol": "XDEF",
-            "quantity": 15.0,
-            "entry_price": 33.192,
-            "current_price": 31.8449993,
-            "currency": "EUR",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": null,
-            "initial_risk": null,
-            "days_held": 0,
-            "pos_pct": 3.8250903631823983,
-            "risk_pct": null,
-            "dist_pct": null,
-            "status_flags": [
-                "\u274cNoStop"
-            ]
+            "status_flags": []
         }
     }
 }

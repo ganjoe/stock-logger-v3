@@ -4,32 +4,21 @@ F-PM-020,Logic,Offene Positionen,Das Skript muss aus den Transaktionen die aktue
 F-PM-030,Logic,Positions-Richtung,Das Skript muss Long- und Short-Positionen korrekt unterscheiden und anzeigen.,service.py
 F-PM-040,Logic,Durchschnittspreis,Der gewichtete Durchschnitts-Einstiegspreis muss für jede offene Position berechnet werden.,service.py
 F-PM-050,Persistence,Risikodaten laden,Das Skript muss vorhandene Risikodaten aus 'manual_risk_data.json' laden.,service.py
-F-PM-060,Persistence,Risikodaten speichern,Das Skript muss aktualisierte Risikodaten in 'manual_risk_data.json' speichern.,manage_stoploss.py
-F-PM-080,UX,Überspringen erlauben,Der Benutzer muss die Möglichkeit haben eine Position im Batch-Prozess zu überspringen ('skip').,manage_stoploss.py
+F-PM-060,Persistence,Risikodaten speichern,Das Skript muss aktualisierte Risikodaten in 'manual_risk_data.json' speichern.,service.py
 F-PM-090,Calculation,Initial Risk,"Das Initial Risk wird berechnet als |Entry - StopLoss| × Quantity (Bestandspositionen).",service.py
 F-PM-100,Calculation,Richtungsabhängig,Die Berechnung muss Long (Stop < Entry) und Short (Stop > Entry) korrekt berücksichtigen.,service.py
 F-PM-110,Data,Positions-Key,Jede Position muss eindeutig über Symbol + Entry Date identifizierbar sein.,service.py
-F-PM-115,Data,Trade-ID speichern,Zu jeder Position müssen die zugehörigen Trade-IDs (aller offenen Tranchen) mitgespeichert werden.,manage_stoploss.py
-F-PM-120,Output,Bestätigung,Nach dem Speichern muss eine Bestätigung mit dem Dateipfad ausgegeben werden.,manage_stoploss.py
-F-PM-130,UX,Interaktives Menü,"Das Menü bietet Optionen: Minervini Wizard (Neu), Bearbeiten, Liste, Marktdaten-Update, Beenden.",manage_stoploss.py
 F-PM-160,Logic,Löschen durch Null,Das Löschen eines Stop-Loss erfolgt durch Setzen des Wertes auf 0.0 (impliziert Totalverlust).,service.py
-F-PM-170,Validation,Stop-Loss Warnung,"Warnung bei unlogischen Stop-Loss-Werten (z.B. Stop > Entry für Long) mit Option zum Überschreiben.",manage_stoploss.py
 F-PM-180,Integration,DataFetcher Schnittstelle,Das Skript muss aktuelle Marktpreise über den py_datafetcher Dienst beziehen.,service.py
-F-PM-190,UX,Marktpreis Anzeige,"Die Listenansicht muss eine Spalte 'Price' enthalten, die den aktuellsten Preis aus dem Cache anzeigt.",manage_stoploss.py
-F-PM-200,UX,Marktdaten Update,Manueller Trigger für Preis-Update via py_datafetcher aus dem Menü heraus.,manage_stoploss.py
-F-PM-210,UX,Visualisierung Fetching,Fetching-Prozess wird durch farbige Symbole und Echtzeit-Streaming visualisiert.,manage_stoploss.py
-F-PM-220,Input,Robuste Dezimal-Arithmetik,Akzeptanz von Punkt und Komma als Dezimaltrenner bei allen Benutzereingaben.,manage_stoploss.py
 F-PM-230,Calculation,Unrealized P&L,"Berechnung von Gewinn/Verlust absolut und in Prozent (Marktpreis vs. Einstand).",service.py
 F-PM-240,Calculation,R-Multiple,"Das R-Multiple (P&L / Initial Risk) wird für jede Position mit Risiko berechnet.",service.py
 F-PM-250,Output,Portfolio Summen,Gesamtsummen für Investiertes Kapital (Marktwert) und nicht realisierte G+V.,service.py
 F-PM-260,Output,Journal Integration,"Kennzahlen Equity, Buying Power (Cash) und Invested werden aus journal.csv gelesen.",service.py
 F-PM-270,Architecture,Service Entkopplung,Geschäftslogik ist in PortfolioService gekapselt; Datenaustausch via DTOs.,service.py
-F-PM-280,UX,Bunte Formatierung,Nutzung von ANSI-Farben für Performance und Status-Flags (Grün/Gelb/Rot).,manage_stoploss.py
 F-PM-290,Dashboard,Interaktive Übersicht,Grafische und tabellarische Darstellung im Streamlit-Dashboard.,portfolio_overview.py
 F-PM-300,Dashboard,Interactive Data Editing,Stop-Loss Werte können direkt im Dashboard-Editor geändert und gespeichert werden.,portfolio_overview.py
 F-PM-330,Metrics,Minervini Kennzahlen,"System berechnet 'Days held' (Time-Stop), 'Pos %' (Exposure) und 'Risk %' (Equity Risk).",service.py
 F-PM-350,Configuration,Zentrale Risikoeinstellungen,Handels-Parameter (Risiko-Standard, Time-Threshold, Fees) aus 'data_risksettings.csv' laden.,service.py
-F-PM-360,UX,Emoji Status Diagnose,"Positionen werden diagnostiziert: 🟢 Profit, 🟡 Loss, 🔴 Broken, ⏳ Time-Stop, ⚠️ No-Stop.",manage_stoploss.py
 F-MSM-010,Architecture,Single Class Module,Eigenständige Klasse (MinerviniSizer) für die Sizing-Logik (Live/Paper nutzbar).,-
 F-MSM-020,Configuration,Risk Settings Integration,Nutzung von target_exposure_pct, default_fee, max_pos_size_pct aus data_risksettings.csv.,-
 F-MSM-030,Logic,Step 1: Portfolio Status,Abfrage Equity/Exposure. Defaults aus Live-Daten sind vom User überschreibbar.,-
@@ -41,16 +30,4 @@ F-MSM-080,Calculation,Limit 3: Size-Cap,Limitierung durch maximale Positionsgrö
 F-MSM-090,Logic,Step 3: The Funnel,Ermittlung des Minimums aus Risiko-, Budget- und Size-Limit als Vorschlagswert.,-
 F-MSM-100,UX,Manual Override,Manuelle Korrektur des vorgeschlagenen Engpass-Wertes durch den Benutzer.,-
 F-MSM-110,Output,Step 4: Scenario Summary,Zusammenfassung inkl. neuem Exposure %, Risiko an Equity und R-Zielen.,-
-F-MSM-120,UX,Wizard Flow,Geführter Dialog-Wizard (Schritt 1-4) im CLI mit Trennlinien nach Mockup.,-
-F-MSM-130,UX,Dual Wizard Mode,Unterstützung für 'Minervini Wizard (Live)' und 'Minervini Wizard (Paper)' im Paper-Menü.,manage_stoploss.py
-F-MSM-140,Data,Dynamic Metrics Source,Der Wizard lädt Basisdaten (Equity/Exposure) wahlweise aus dem Live-Journal oder dem Paper-Bestand.,sizer.py
-F-MSM-150,Persistence,Paper Journal Storage,Metriken für das Paper-Portfolio werden in 'paper_journal.csv' persistent gespeichert.,service.py
-F-MSM-160,UX,Editiere Paper Metriken,Der Nutzer kann Equity und Exposure für das Paper-Portfolio manuell über das CLI-Menü anpassen und speichern.,manage_stoploss.py
-F-CLI-010,UX,Main Menu Structure,"Das Hauptmenü wird neu gegliedert: [1] Portfolio (Live), [2] Portfolio (Simulated), [3] Broker Verbindung (Toggle).",-
-F-CLI-020,System,Live Data Snapshot,Abgerufene Live-Daten werden lokal als 'data_portfolio_live_snapshot.json' gespeichert.,-
-F-CLI-030,UX,Offline Live View,"Menüpunkt [1] zeigt bei inaktiver Broker-Verbindung automatisch den Inhalt von 'data_portfolio_live_snapshot.json' an.",-
-F-CLI-040,UX,Connection Toggle,"Menüpunkt [3] schaltet die Verbindung (Connect/Disconnect) und zeigt den Status im Header global an (🟢/🔴).",-
-F-CLI-110,Trading,Live Real Trading,"Das System führt echte Transaktionen über den Broker aus (Buy/Sell, Limit/Stop/Stop-Limit).",actions.action_place_order
-F-CLI-400,UX,Sortierbares Dashboard,Benutzer kann das Dashboard interaktiv nach allen 12 Spalten sortieren (Sitzungs-persistent).,formatter.render_dashboard
-F-CLI-410,UX,Erweiterte Spalten,Dashboard zeigt Qty und AvgPrice (Einkaufspreis) zur besseren Depot-Übersicht.,formatter.render_dashboard
 F-PM-370,Logic,Metadata Merging,Manuelle Stops und Metadaten werden beim Broker-Refresh aus dem Snapshot gemerget (kein Datenverlust).,service._merge_states

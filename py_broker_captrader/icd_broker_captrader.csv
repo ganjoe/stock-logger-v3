@@ -3,13 +3,13 @@ ICD-PM-010,Portfolio,Get Positions,Das Interface liefert eine Liste von BrokerPo
 ICD-PM-020,Portfolio,Get Account Metrics,Das Interface liefert aggregierte Kennzahlen via AccountMetrics DTO (Equity, Cash).,BrokerDataSource.get_account_metrics
 ICD-PM-040,Portfolio,Get Portfolio State,Abruf des Zustands als generisches Python Dictionary (JSON-kompatibel) zur Entkopplung.,BrokerDataSource.get_portfolio_state
 ICD-BRK-040,Connection,Shared Connection,Unterstützung einer zentralen IB-Verbindung via IBKRConnection Wrapper.,connection.py
-ICD-BRK-060,Connection,Unique Client ID,Nutzer des Moduls sind für die Übergabe einer eindeutigen Client ID verantwortlich (Konfliktvermeidung).,py_manage_portfolio/cli.py
+ICD-BRK-060,Connection,Master Client 0,Standard-Nutzung von Client ID 0 für die Master-Sitzung zur Sicherstellung der vollen TWS-Synchronisation.,BrokerDataSource
 ICD-BRK-070,Connection,Lifecycle Management,Implementiert BrokerConnection Interface (is_connected / disconnect).,BrokerDataSource
 ICD-BRK-080,Data,Delayed Market Data,Erzwingt 'Delayed Data' (Market Data Type 3) um Abokosten zu vermeiden.,BrokerDataSource.__init__
 ICD-BRK-090,Persistence,Snapshot Handling,Die Persistierung von Snapshots (JSON) erfolgt durch den Aufrufer (Service-Layer).,py_manage_portfolio/cli.py
 ICD-PM-050,Architecture,Interface Segregation,"Modulare Interfaces: BrokerReader (Read), BrokerOrderManager (Write/Trade), BrokerConnection (Lifecycle).",interface.py
 ICD-PM-060,Portfolio,Get Open Orders,Abruf aktiver Orders als List[BrokerOpenOrder] inkl. detailliertem Status.,BrokerDataSource.get_open_orders
-ICD-PM-070,Portfolio,Place Order,Platzieren von Echtzeit-Orders via BrokerOrderRequest DTO (Symbol, Action, Qty, Type).,BrokerDataSource.place_order
+ICD-PM-070,Portfolio,Place Order,Platzieren von Orders via BrokerOrderRequest DTO (incl. support for STP and STP LMT with trigger/limit prices).,BrokerDataSource.place_order
 ICD-PM-080,Portfolio,Cancel Order,Stornieren einer offenen Order via Order-ID.,BrokerDataSource.cancel_order
 ICD-PM-090,Risk,Trailing Stop Logic,Extraktion des `trailStopPrice` für dynamische Stops.,BrokerDataSource._get_active_stops
 ICD-BRK-100,Connection,TWS Order Sync,Nutzung von `reqAllOpenOrders` zur Synchronisation mit TWS-Sitzungen.,BrokerDataSource.__init__

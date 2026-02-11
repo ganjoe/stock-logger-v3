@@ -52,7 +52,9 @@ Das Modul `py_broker_captrader` ist als **eigenständiges Paket** konzipiert. Es
 | F-BRK-070 | Account | Account Summary | Methode `get_account_metrics() -> AccountMetrics` liefert NetLiquidation (Equity) und AvailableFunds (Cash). | BrokerDataSource.get_account_metrics |
 | F-BRK-080 | Status | Order Mapping | IBKR-Order-Status (e.g. `PendingSubmit`, `Inactive`) werden auf eine einheitliche `OrderStatus` Enum gemappt. | BrokerDataSource.get_open_orders |
 | F-BRK-090 | Risk | Trailing Stop Support | Unterstützung für `TRAIL` und `TRAIL LIMIT` Orders zur dynamischen Stop-Loss Ermittlung. | BrokerDataSource._get_active_stops |
-| F-BRK-100 | Connection | TWS Sync | Das System fordert via `reqAllOpenOrders()` auch manuell in der TWS platzierte Orders an (Standard: Client ID 0). | BrokerDataSource.__init__ |
+| F-BRK-100 | Connection | Master Client 0 | Das System nutzt standardmäßig Client ID 0 zur vollen Synchronisation inkl. TWS-Orders. | BrokerDataSource.__init__ |
+| F-BRK-110 | Risk | Stop-Limit Support | Unterstützung für STP LMT Orders inkl. Trigger- und Limit-Preis Management. | BrokerDataSource.place_order |
+| F-BRK-120 | Orders | Order Modification | Unterstützung zur Änderung bestehender Orders (Qty, Price) via `update_order`. | BrokerDataSource.update_order |
 
 ---
 
