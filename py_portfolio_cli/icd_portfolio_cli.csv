@@ -1,0 +1,18 @@
+ID,Category,Title,Description,Covered By
+ICD-CLI-010,Menu,Main Menu Rendering,Hauptmenü mit Live/Sim/Broker und Online/Offline-Status. Gibt User-Wahl als String zurück.,menus.show_menu
+ICD-CLI-020,Menu,Live Sub-Menu,Loop mit Dashboard-Anzeige und Dispatch zu Actions/Wizard.,menus.show_live_menu
+ICD-CLI-030,Menu,Simulation Sub-Menu,Einmalige Menü-Anzeige mit Dashboard. Gibt User-Wahl als String zurück.,menus.show_simulation_menu
+ICD-CLI-040,Action,Stop-Loss Manager,Zeigt Positionsliste und erlaubt Stop-Loss-Eingabe. Nutzt service.update_stop_loss().,actions.action_manage_stops
+ICD-CLI-050,Action,Paper Init,Klont Live-Portfolio via service.init_from_live() nach Bestätigung.,actions.action_init_paper
+ICD-CLI-060,Action,Edit Paper Position,"Sub-Menü: Löschen, Stop bearbeiten, Qty bearbeiten. Nutzt service.delete_position_sim() / update_stop_loss() / update_paper_quantity().",actions.action_edit_paper_position
+ICD-CLI-070,Action,Edit Paper Metrics,"Manuelle Eingabe von Equity und Exposure. Nutzt service.update_paper_journal().",actions.action_edit_paper_metrics
+ICD-CLI-080,Action,Update Prices,Aktualisiert Marktpreise via service.get_open_positions(update_prices=True) und speichert Snapshot.,actions.action_update_prices
+ICD-CLI-090,Action,Clear Paper,Löscht Paper-Portfolio via service.clear_paper_portfolio() nach Bestätigung.,actions.action_clear_paper
+ICD-CLI-100,Action,Switch Data Source,"Wechsel zwischen Offline (OfflineDataSource) und Broker (BrokerAdapter). Lazy Imports.",actions.action_switch_data_source
+ICD-CLI-110,Connection,Broker Connect,"Interaktive Eingabe (Host, Port, Account). Erstellt BrokerAdapter und setzt als DataSource.",actions._connect_to_broker
+ICD-CLI-120,Display,Dashboard Rendering,"Minervini-Tabelle mit ANSI-Farben: Sym, Days, Pos%, Price, Gain%, Stop, Dist%, Risk%, R, Status.",formatter.render_dashboard
+ICD-CLI-130,Wizard,Sizing Wizard,"4-Schritte-Dialog: Context → Params → Analyse → Speichern. Nutzt MinerviniSizer.",wizard.run_sizing_wizard
+ICD-CLI-140,Utility,Decimal Parsing,"Robustes Parsing: Komma/Punkt-Handling für deutsche und internationale Formate.",utils.parse_input_decimal
+ICD-CLI-150,Utility,Stop-Loss Prompt,"Validierte Eingabe mit Richtungsprüfung (LONG: Stop < Entry, SHORT: Stop > Entry).",utils.prompt_stop_loss
+ICD-CLI-160,Entry,Main Loop,"Hauptschleife: Dispatch zu Live-Menü, Sim-Modus, Broker Toggle.",main.main
+ICD-CLI-170,Entry,Simulation Mode,"Sim-Schleife: Import, Add/Edit, Wizard, Reset. Erstellt eigenen PortfolioService(context='sim').",main.start_simulation_mode

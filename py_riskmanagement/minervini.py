@@ -1,11 +1,18 @@
+"""
+Minervini Position Sizing Strategy.
 
+Implements the "Funnel" approach: Risk Limit, Budget Limit, Size Cap.
+The minimum of all three determines the suggested share count.
+"""
 import os
 import csv
 import math
-from typing import Dict, List, Optional
-from .models import SizingContext, TradeParameters, SizingResult
+from typing import Dict
 
-class MinerviniSizer:
+from .interface import RiskStrategy, SizingContext, TradeParameters, SizingResult
+
+
+class MinerviniSizer(RiskStrategy):
     def __init__(self, project_root: str):
         self.project_root = project_root
         self.settings = self._load_settings()
@@ -99,8 +106,6 @@ class MinerviniSizer:
         invested_pct = (invested / context.equity * 100) if context.equity > 0 else 0
         
         total_risk = (suggested * risk_per_share) + (2 * params.one_way_fee)
-        # Or should risk be calculated without fees regarding the "amount lost if stop hit"?
-        # Usually: Loss = (Entry - Stop) * Qty + Fees. Yes.
         risk_equity_pct = (total_risk / context.equity * 100) if context.equity > 0 else 0
         
         # Scenarios (Break-Even needs to cover Roundtrip Fee)

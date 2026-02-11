@@ -1,81 +1,105 @@
 """
-Portfolio Data Source Interface and DTOs.
+Portfolio Data Source Interfaces and DTOs.
 
-This module defines the abstract interface for portfolio data sources,
-allowing the PortfolioService to work with different backends (Offline files, Broker API).
+This module defines segregated interfaces for portfolio data sources:
+
+- PortfolioReader: Read-only portfolio state access (get_portfolio_state)
+- ConnectionAware: Lifecycle management for broker connections
+- OrderManager: Interface for placing and modifying orders
 """
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import date
-from typing import Dict, List, Optional
+from typing import List, Optional, TYPE_CHECKING
+from enum import Enum
+
+if TYPE_CHECKING:
+    from .models.portfolio_state import PortfolioState
+
+
+class OrderStatus(Enum):
+    PRE_SUBMITTED = "PreSubmitted"
+    SUBMITTED = "Submitted"
+    FILLED = "Filled"
+    CANCELLED = "Cancelled"
+    UNKNOWN = "Unknown"
 
 
 @dataclass
-class AccountMetrics:
-    """Account-level financial metrics."""
-    equity: float
-    cash: float
-    exposure: float  # Total invested / market value of positions
-
-
-@dataclass
-class RawPosition:
-    """A position as returned by the data source (before enrichment with market data)."""
+class OpenOrder:
+    """Detailed open order information."""
     symbol: str
-    isin: Optional[str]
+    order_type: str    # e.g., 'LMT', 'STP', 'STP LMT'
+    action: str        # 'BUY' or 'SELL'
     quantity: float
-    entry_price: float
-    entry_date: Optional[date]
-    currency: str
+    time_in_force: str  # e.g., 'GTC', 'DAY'
+    order_id: str
+    limit_price: Optional[float] = None
+    stop_price: Optional[float] = None
+    filled_quantity: float = 0.0
+    status: OrderStatus = OrderStatus.PRE_SUBMITTED
 
 
 @dataclass
-class StopOrder:
-    """Stop-loss order or risk data."""
+class OrderRequest:
+    """Parameters for placing a new order."""
     symbol: str
-    stop_price: float
-    order_id: Optional[str] = None  # For broker stops
-    initial_risk: Optional[float] = None  # For offline risk data
+    action: str        # 'BUY' or 'SELL'
+    quantity: float
+    order_type: str    # 'LMT', 'MKT', 'STP', 'STP LMT'
+    limit_price: Optional[float] = None
+    stop_price: Optional[float] = None
+    time_in_force: str = "DAY" # 'DAY', 'GTC'
 
 
-class PortfolioDataSource(ABC):
+class PortfolioReader(ABC):
     """
-    Abstract interface for portfolio data sources.
-    
-    Implementations:
-    - OfflineDataSource: Reads from trades.xml, manual_risk_data.json, journal.csv
-    - BrokerDataSource: Reads from IBKR API (future)
+    Read-only portfolio access interface.
     """
     
     @abstractmethod
-    def get_positions(self) -> List[RawPosition]:
-        """Get all open positions."""
+    def get_portfolio_state(self) -> PortfolioState:
+        """Get consolidated portfolio state (cash, equity, positions with prices)."""
         pass
+
+
+class OrderManager(ABC):
+    """Interface for placing and modifying orders (F-API-090)."""
     
     @abstractmethod
-    def get_stop_losses(self) -> Dict[str, StopOrder]:
-        """Get stop-loss data keyed by symbol."""
-        pass
-    
-    @abstractmethod
-    def get_account_metrics(self) -> AccountMetrics:
-        """Get account-level metrics (equity, cash, exposure)."""
-        pass
-    
-    @abstractmethod
-    def set_stop_loss(self, symbol: str, stop_price: float) -> bool:
-        """Set or update a stop-loss. Returns True on success."""
-        pass
-    
-    @abstractmethod
-    def close_position(self, symbol: str) -> bool:
-        """Close/delete a position. Returns True on success."""
-        pass
-    
-    def add_position(self, symbol: str, entry_price: float, stop_loss: float, 
-                     quantity: float, **kwargs) -> dict:
+    def place_order(self, request: OrderRequest) -> Optional[str]:
         """
-        Add a new position (for paper/offline trading only).
-        Broker implementations should raise NotImplementedError.
+        Places a new order at the broker.
+        Returns the Order ID on success, or None on failure.
         """
-        raise NotImplementedError("add_position not supported by this data source")
+        pass
+
+    @abstractmethod
+    def cancel_order(self, order_id: str) -> bool:
+        """
+        Cancels an existing order by ID.
+        Returns True if cancellation request was sent.
+        """
+        pass
+    
+    @abstractmethod
+    def get_open_orders(self, symbol: Optional[str] = None) -> List[OpenOrder]:
+        """Get all open orders, optionally filtered by symbol."""
+        pass
+
+
+class ConnectionAware(ABC):
+    """
+    Lifecycle management for data sources with external connections.
+    """
+    
+    @abstractmethod
+    def is_connected(self) -> bool:
+        """Check if the connection is active."""
+        pass
+    
+    @abstractmethod
+    def disconnect(self) -> None:
+        """Close the connection."""
+        pass

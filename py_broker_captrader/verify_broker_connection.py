@@ -15,7 +15,10 @@ import argparse
 import random
 import sys
 import time
-from py_broker_captrader import BrokerDataSource
+try:
+    from .broker_data_source import BrokerDataSource
+except ImportError:
+    from py_broker_captrader import BrokerDataSource
 
 def main():
     parser = argparse.ArgumentParser(description='Verify IBKR Connection (Read-Only)')
@@ -117,6 +120,8 @@ def main():
             # --- 5. DATA FETCHER CHECK (History) ---
             print("\n📜 HISTORICAL DATA TEST (DataFetcher)")
             try:
+                from .data_provider import BrokerDataProvider
+            except ImportError:
                 from py_broker_captrader.data_provider import BrokerDataProvider
                 # Re-use connection
                 provider = BrokerDataProvider(ds._connection)

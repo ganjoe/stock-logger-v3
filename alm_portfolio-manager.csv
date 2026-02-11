@@ -46,3 +46,11 @@ F-MSM-130,UX,Dual Wizard Mode,Unterstützung für 'Minervini Wizard (Live)' und 
 F-MSM-140,Data,Dynamic Metrics Source,Der Wizard lädt Basisdaten (Equity/Exposure) wahlweise aus dem Live-Journal oder dem Paper-Bestand.,sizer.py
 F-MSM-150,Persistence,Paper Journal Storage,Metriken für das Paper-Portfolio werden in 'paper_journal.csv' persistent gespeichert.,service.py
 F-MSM-160,UX,Editiere Paper Metriken,Der Nutzer kann Equity und Exposure für das Paper-Portfolio manuell über das CLI-Menü anpassen und speichern.,manage_stoploss.py
+F-CLI-010,UX,Main Menu Structure,"Das Hauptmenü wird neu gegliedert: [1] Portfolio (Live), [2] Portfolio (Simulated), [3] Broker Verbindung (Toggle).",-
+F-CLI-020,System,Live Data Snapshot,Abgerufene Live-Daten werden lokal als 'data_portfolio_live_snapshot.json' gespeichert.,-
+F-CLI-030,UX,Offline Live View,"Menüpunkt [1] zeigt bei inaktiver Broker-Verbindung automatisch den Inhalt von 'data_portfolio_live_snapshot.json' an.",-
+F-CLI-040,UX,Connection Toggle,"Menüpunkt [3] schaltet die Verbindung (Connect/Disconnect) und zeigt den Status im Header global an (🟢/🔴).",-
+F-CLI-110,Trading,Live Real Trading,"Das System führt echte Transaktionen über den Broker aus (Buy/Sell, Limit/Stop/Stop-Limit).",actions.action_place_order
+F-CLI-400,UX,Sortierbares Dashboard,Benutzer kann das Dashboard interaktiv nach allen 12 Spalten sortieren (Sitzungs-persistent).,formatter.render_dashboard
+F-CLI-410,UX,Erweiterte Spalten,Dashboard zeigt Qty und AvgPrice (Einkaufspreis) zur besseren Depot-Übersicht.,formatter.render_dashboard
+F-PM-370,Logic,Metadata Merging,Manuelle Stops und Metadaten werden beim Broker-Refresh aus dem Snapshot gemerget (kein Datenverlust).,service._merge_states
