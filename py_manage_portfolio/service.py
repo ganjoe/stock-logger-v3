@@ -228,7 +228,7 @@ class PortfolioService:
         
         return flags
 
-    def add_position_sim(self, symbol: str, quantity: float, price: float, date: str):
+    def add_position_sim(self, symbol: str, quantity: float, price: float, date: str) -> bool:
         """Adds a position in Simulation mode and updates unified state + legacy logs."""
         if self.context != "sim":
             raise ValueError("Cannot add simulated position in Live mode")
@@ -244,23 +244,37 @@ class PortfolioService:
             self.state.update_timestamp()
             self.save_simulation_state()
             print(f"✅ Simulation: {quantity} {symbol} bought @ {price}")
+            return True
         else:
             print("❌ Insufficient Cash for Simulation")
+            return False
 
     def get_open_positions(self, update_prices: bool = False) -> List[Position]:
         """Alias for get_positions, compatible with CLI."""
         if update_prices and self.context == "live" and self.is_broker_connected():
+             # IB needs a fraction of a second to update the portfolio list 
+             # after an order execution event.
+             # Use the data source's sync method to allow event loop ticks.
+             ds = self.get_data_source()
+             if hasattr(ds, 'sync'):
+                 ds.sync(0.5)
+             
              # Force refresh from data source
-             self.state = self._data_source.get_portfolio_state()
+             self.load_portfolio_state()
         return self.get_positions()
 
     def update_stop_loss(self, symbol: str, stop_loss: float, 
-                        stop_type: str = "STP", limit_price: Optional[float] = None):
-        """Updates stop loss for a position and persists to local snapshot."""
+                        stop_type: str = "STP", limit_price: Optional[float] = None,
+                        quantity: Optional[float] = None, direction: Optional[str] = None):
+        """
+        Updates stop loss for a position.
+        1. Persists to local snapshot (if position exists).
+        2. Synchronizes with broker (if in live mode).
+        """
         if not self.state: self.load_portfolio_state()
         
-        if symbol in self.state.positions:
-            pos = self.state.positions[symbol]
+        pos = self.state.positions.get(symbol)
+        if pos:
             pos.stop_loss = stop_loss 
             pos.stop_type = stop_type
             pos.stop_limit_price = limit_price
@@ -273,9 +287,20 @@ class PortfolioService:
             snapshot_name = "data_portfolio_live_snapshot.json" if self.context == "live" else "data_portfolio_simulation.json"
             self.storage.save_portfolio(self.state, snapshot_name)
             
-            # 2. Synchronize with Broker (if Live)
+            # Capture defaults for broker sync if not provided
+            if quantity is None: quantity = pos.quantity
+            if direction is None: direction = pos.direction
+        
+        # 2. Synchronize with Broker (if Live)
+        if self.context == "live" and self.is_broker_connected():
             from .data_source import OrderManager, OrderRequest
-            if self.context == "live" and self.is_broker_connected() and isinstance(self._data_source, OrderManager):
+            if isinstance(self._data_source, OrderManager):
+                # We need quantity and direction for the broker order.
+                # If these are missing (e.g. symbol not in portfolio and not passed), we can't sync.
+                if quantity is None or direction is None:
+                    print(f"⚠️ Cannot sync stop for {symbol} with broker: Position unknown and no quantity/direction provided.")
+                    return
+
                 print(f"📡 Syncing {stop_type} for {symbol} with Broker...")
                 ds = self._data_source
                 
@@ -288,11 +313,11 @@ class PortfolioService:
                             ds.cancel_order(o.order_id)
                     
                     # Place new stop order
-                    action = "SELL" if pos.direction == "LONG" else "BUY"
+                    action = "SELL" if direction == "LONG" else "BUY"
                     req = OrderRequest(
                         symbol=symbol,
                         action=action,
-                        quantity=pos.quantity,
+                        quantity=quantity,
                         order_type=stop_type,
                         limit_price=limit_price,
                         stop_price=stop_loss,
@@ -308,8 +333,8 @@ class PortfolioService:
                 except Exception as e:
                     print(f"   ❌ Error syncing stop with broker: {e}")
 
-            if self.context == "live":
-                print(f"✓ Stop Loss for {symbol} saved to local snapshot.")
+        if self.context == "live" and pos:
+            print(f"✓ Stop Loss for {symbol} saved to local snapshot.")
 
     def remove_stop_loss(self, symbol: str):
         """Removes stop loss for a position and cancels corresponding broker orders."""

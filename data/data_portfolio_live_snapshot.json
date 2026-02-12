@@ -1,26 +1,6 @@
 {
-    "timestamp": "2026-02-11T22:10:42.636773",
-    "cash": 10000.0,
-    "equity": 10000.0,
-    "positions": {
-        "AAPL": {
-            "symbol": "AAPL",
-            "quantity": 10,
-            "entry_price": 150.0,
-            "current_price": 160.0,
-            "currency": "USD",
-            "isin": null,
-            "entry_date": null,
-            "direction": "LONG",
-            "stop_loss": 140.0,
-            "stop_limit_price": 139.0,
-            "stop_type": "STP LMT",
-            "initial_risk": 100.0,
-            "days_held": 0,
-            "pos_pct": null,
-            "risk_pct": null,
-            "dist_pct": null,
-            "status_flags": []
-        }
-    }
+    "timestamp": "2026-02-12T22:24:22.436830",
+    "cash": 1015658.15,
+    "equity": 1015659.49,
+    "positions": {}
 }

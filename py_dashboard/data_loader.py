@@ -7,11 +7,35 @@ def load_data():
     """
     Loads data from journal.csv and prepares the DataFrame and Account Summary.
     """
+    from pathlib import Path
+    
+    # 1. Resolve path robustly
+    # Project root is one level up from py_dashboard
+    script_dir = Path(__file__).parent.resolve()
+    project_root = script_dir.parent
+    
+    potential_paths = [
+        project_root / "data" / "journal.csv",      # Standard location
+        project_root / "journal.csv",               # Root fallback
+        Path("data/journal.csv"),                   # Relative to CWD (Root)
+        Path("journal.csv")                         # Relative to CWD (Generic)
+    ]
+    
+    csv_path = None
+    for p in potential_paths:
+        if p.exists():
+            csv_path = p
+            break
+            
+    if not csv_path:
+        st.error(f"journal.csv not found! Checked: {[str(p) for p in potential_paths]}")
+        return pd.DataFrame(), {}
+        
     # Load CSV
     try:
-        df = pd.read_csv("journal.csv", sep=";")
-    except FileNotFoundError:
-        st.error("journal.csv not found!")
+        df = pd.read_csv(csv_path, sep=";")
+    except Exception as e:
+        st.error(f"Error loading {csv_path}: {e}")
         return pd.DataFrame(), {}
     
     # Combine Date and Time

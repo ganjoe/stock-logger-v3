@@ -6,6 +6,8 @@ from datetime import datetime
 from typing import Optional
 from py_manage_portfolio.service import PortfolioService
 from py_riskmanagement import MinerviniSizer, SizingContext, TradeParameters, SizingResult
+from py_manage_portfolio.data_source import OrderManager, OrderRequest
+from .logger import append_trade_log
 
 
 def wizard_step_1_get_context(service: PortfolioService, sizer: MinerviniSizer, 
@@ -18,25 +20,34 @@ def wizard_step_1_get_context(service: PortfolioService, sizer: MinerviniSizer,
     print(" SCHRITT 1: PORTFOLIO STATUS")
     print("=" * 50)
     
-    # Get defaults from selected source
-    if source == "live":
-        temp_live = PortfolioService(project_root=service.project_root, context="live")
-        equity, _, total_assets = temp_live._get_journal_metrics()
-        print(f" (Lade Daten aus LIVE Journal...)")
-    else:
+    # Get defaults from the active service
+    is_live_broker = source == "live" and service.is_broker_connected()
+    
+    if is_live_broker:
+        print(" (Lade Echtzeit-Daten vom Broker...)")
+        # Ensure we have fresh data
+        service.load_portfolio_state()
         equity, _, total_assets = service._get_journal_metrics()
-        print(f" (Lade Daten aus PAPER Journal...)")
+    else:
+        # Fallback to local journals/snapshots
+        equity, _, total_assets = service._get_journal_metrics()
+        print(f" (Lade Daten aus {'LIVE' if service.context == 'live' else 'PAPER'} Journal...)")
 
     current_exposure = total_assets 
-    defaults = sizer.get_defaults()
     
-    print("Bitte aktuelle Kontodaten eingeben:")
-    
-    eq_in = input(f"Total Equity ($) [{equity:.2f}]: ").replace(',', '.').strip()
-    final_equity = float(eq_in) if eq_in else equity
-    
-    exp_in = input(f"Aktuelles Exposure ($) [{current_exposure:.2f}]: ").replace(',', '.').strip()
-    final_exposure = float(exp_in) if exp_in else current_exposure
+    if is_live_broker:
+        # SKIP manual input if connected to broker
+        final_equity = equity
+        final_exposure = current_exposure
+        print(f" Total Equity ($): {final_equity:,.2f}")
+        print(f" Exposure ($):     {final_exposure:,.2f}")
+    else:
+        print("Bitte aktuelle Kontodaten eingeben:")
+        eq_in = input(f"Total Equity ($) [{equity:.2f}]: ").replace(',', '.').strip()
+        final_equity = float(eq_in) if eq_in else equity
+        
+        exp_in = input(f"Aktuelles Exposure ($) [{current_exposure:.2f}]: ").replace(',', '.').strip()
+        final_exposure = float(exp_in) if exp_in else current_exposure
     
     target_pct_in = input(f"Ziel-Exposure % (z.B. 120 für Margin) [100]: ").replace(',', '.').strip()
     final_target = float(target_pct_in) if target_pct_in else 100.0
@@ -177,22 +188,102 @@ def run_sizing_wizard(service: PortfolioService, source: str = "live"):
     print(f" [3R] Ziel 2:         {result.price_3r:.2f} $")
     print("=" * 50)
     
-    save = input("💾 Soll dieser Trade in die Simulation übernommen werden? [y/N]: ").lower()
-    if save == 'y':
-        # Add to simulation
-        target_service = service
-        if service.context != "sim":
-            target_service = PortfolioService(project_root=service.project_root, context="sim")
+    # Step 4: Execution & Save
+    executed_live = False
+    
+    # 5. Live Execution (if connected)
+    if source == "live" and service.is_broker_connected():
+        ds = service.get_data_source()
+        if ds and isinstance(ds, OrderManager):
+            print("\n" + "=" * 50)
+            print(" 🚀 LIVE EXECUTION (Broker)")
+            print("=" * 50)
+            execute = input(f"Soll dieser Trade JETZT auf {ds.__class__.__name__} ausgeführt werden? [y/N]: ").strip().lower()
+            
+            if execute == 'y':
+                # 1. Entry Order Type
+                print("\nEinstiegs-Order Typ: [1] MKT (Market), [2] LMT (Limit), [3] STP (Stop)")
+                et_choice = input("Auswahl [1]: ").strip() or "1"
+                
+                type_map = {"1": "MKT", "2": "LMT", "3": "STP"}
+                entry_type = type_map.get(et_choice, "MKT")
+                
+                # 2. Confirm Entry
+                if (entry_type != "MKT") and (params.entry_price <= 0 or params.stop_loss <= 0):
+                    print(f" ❌ Ungültige Preise (Entry: {params.entry_price}, Stop: {params.stop_loss}). Abbruch.")
+                    return
 
-        # Use new add_position_sim
-        try:
-             target_service.add_position_sim(
-                symbol=params.symbol, 
-                quantity=final_shares,
-                price=params.entry_price,
-                date=datetime.now().strftime("%Y-%m-%d")
-             )
-             print(f"Gespeichert!")
-        except Exception as e:
-             print(f"Fehler beim Speichern: {e}")
+                print(f"\nSende Entry: BUY {final_shares} {params.symbol} @ {entry_type}" + (f" {params.entry_price:.2f}" if entry_type != "MKT" else ""))
+                if input("Bestätigen? [y/N]: ").strip().lower() == 'y':
+                    entry_req = OrderRequest(
+                        symbol=params.symbol,
+                        action="BUY",
+                        quantity=final_shares,
+                        order_type=entry_type,
+                        limit_price=params.entry_price if entry_type == "LMT" else None,
+                        stop_price=params.entry_price if entry_type == "STP" else None,
+                        time_in_force="GTC" 
+                    )
+                    
+                    print(" Sende Entry Order...")
+                    order_id = ds.place_order(entry_req)
+                    if order_id:
+                        print(f" ✅ Entry-Order gesendet! ID: {order_id}")
+                        append_trade_log(service, entry_req, order_id)
+                        executed_live = True
+                        
+                        # 3. Stop Loss (Exit)
+                        print("\n" + "-" * 30)
+                        print(" EXIT STOP-LOSS SETUP")
+                        print("-" * 30)
+                        print(f"Trigger Preis: {params.stop_loss:.2f}")
+                        print("Stop-Typ: [1] STP (Market), [2] STP LMT (Limit)")
+                        st_choice = input("Auswahl [1]: ").strip() or "1"
+                        stop_type = "STP LMT" if st_choice == "2" else "STP"
+                        
+                        lmt_price = None
+                        if stop_type == "STP LMT":
+                            # Default 1 cent below for LONG positions
+                            default_lmt = params.stop_loss - 0.01
+                            lmt_in = input(f"Limit Preis [{default_lmt:.2f}]: ").strip()
+                            lmt_price = float(lmt_in) if lmt_in else default_lmt
+                            
+                        print(f"Sende {stop_type} auf {params.stop_loss:.2f}...")
+                        # Pass quantity and direction explicitly to ensure sync even for new positions
+                        service.update_stop_loss(
+                            params.symbol, 
+                            params.stop_loss, 
+                            stop_type=stop_type, 
+                            limit_price=lmt_price,
+                            quantity=final_shares,
+                            direction="LONG"
+                        )
+                    else:
+                        print(" ❌ Fehler beim Senden der Entry-Order (Broker hat KEINE ID zurückgegeben).")
+    
+    # 6. Simulation Prompt (only if not executed live)
+    if not executed_live:
+        save = input("\n💾 Soll dieser Trade in die Simulation übernommen werden? [y/N]: ").lower()
+        if save == 'y':
+            _save_to_simulation(service, params, final_shares)
+    
     input("\n[Enter] zurück zum Menü...")
+
+
+def _save_to_simulation(service: PortfolioService, params: TradeParameters, final_shares: int):
+    """Helper to save a planned trade to the simulation journal."""
+    target_service = service
+    if service.context != "sim":
+        target_service = PortfolioService(project_root=service.project_root, context="sim")
+
+    try:
+         success = target_service.add_position_sim(
+            symbol=params.symbol, 
+            quantity=final_shares,
+            price=params.entry_price,
+            date=datetime.now().strftime("%Y-%m-%d")
+         )
+         if success:
+              print(f"✓ In Simulation gespeichert.")
+    except Exception as e:
+         print(f"Fehler beim Speichern der Simulation: {e}")

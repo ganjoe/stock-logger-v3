@@ -37,17 +37,20 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
         self._account_id = account_id
         
         if auto_connect:
+            print("  Initialisiere Broker-Verbindung...")
             self._connection.connect()
+            
+            # Allow some time for the initial handshake to receive managed account list
+            self.sync(0.5)
+            
             # Force delayed data (3) to avoid data subscription costs
             self._connection.ib.reqMarketDataType(3)
-            # Request all open orders (including those manually placed in TWS)
+            # Request all open orders
             self._connection.ib.reqAllOpenOrders()
-            try:
-                self._connection.ib.reqAutoOpenOrders(True)
-            except Exception as e:
-                # This fails if client_id != 0, but it's not fatal
-                print(f"ℹ️ Could not enable auto-bind for orders: {e}")
-    
+            
+            # We used to call reqAccountUpdates here, but it caused hangs on some setups.
+            # We will use accessible accountSummary in get_portfolio_state instead.
+            
     @property
     def port(self) -> int:
         """Returns the connection port."""
@@ -58,11 +61,19 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
         if self._account_id:
             return self._account_id
         
-        # Auto-detect first managed account
-        accounts = self._connection.ib.managedAccounts()
-        if not accounts:
-            raise ValueError("No managed accounts found")
-        return accounts[0]
+        # Auto-detect first managed account with retry
+        for _ in range(20): # Up to 2 seconds
+            accounts = self._connection.ib.managedAccounts()
+            if accounts:
+                return accounts[0]
+            self.sync(0.1)
+            
+        raise ValueError("Keine vom Broker verwalteten Accounts gefunden (Timeout).")
+
+    def sync(self, delay: float = 0.1):
+        """Allows ib_insync to process pending messages from the broker."""
+        if self.is_connected():
+            self._connection.ib.sleep(delay)
     
     # --- PortfolioReader ---
     
@@ -78,6 +89,9 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
                 equity=0.0,
                 positions={}
             )
+        
+        # Ensure latest data is processed
+        self.sync(0.1)
             
         ib = self._connection.ib
         account = self._get_account()
@@ -89,6 +103,10 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
         
         # 2. Portfolio Items
         portfolio_items = ib.portfolio(account)
+        if not portfolio_items:
+            # If no positions found, wait a moment to be sure they haven't just arrived
+            self.sync(0.5)
+            portfolio_items = ib.portfolio(account)
         
         # 3. Active Stops
         stops = self._get_active_stops()
@@ -116,7 +134,7 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
             # Enrich with stop if available
             if contract.symbol in stops:
                 pos.stop_loss = stops[contract.symbol]
-            
+                
             positions[contract.symbol] = pos
             
         return PortfolioState(
@@ -127,25 +145,38 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
         )
 
     def _get_account_summary(self) -> Dict[str, float]:
-        """Fetch account summary (NetLiquidation, AvailableFunds)."""
+        """Fetch account summary (NetLiquidation, AvailableFunds) using accountSummary."""
         ib = self._connection.ib
         account = self._get_account()
         
-        ib.reqAccountSummary()
-        # Sleep slightly to allow data to arrive? 
-        # ib_insync usually handles this if we wait for the req?
-        # Actually accountSummary returns a list, it might block?
-        # Let's rely on it returning data or use values from cache if subscribed
-        summary_list = ib.accountSummary(account)
+        # Use accountSummary instead of accountValues/reqAccountUpdates
+        # This is more robust against hanging connections
+        summary = ib.accountSummary(account)
         
         values = {}
-        target_tags = {'NetLiquidation', 'AvailableFunds'}
-        for item in summary_list:
-            if item.account == account and item.tag in target_tags:
+        target_tags = {'NetLiquidation', 'AvailableFunds', 'TotalCashValue'}
+        
+        for item in summary:
+            if item.tag in target_tags:
                 try:
-                    values[item.tag] = float(item.value)
+                    # Filter for base currency (usually matches account base)
+                    # IBKR often sends multiple entries for NetLiquidation (Base+others)
+                    # We prefer the one with currency=USD or matches base
+                    # Simplification: Take the one with numeric value first
+                    val = float(item.value)
+                    
+                    # If we already have a value, only overwrite if this one seems 'better' 
+                    # (e.g. maybe specific currency check if needed). 
+                    # For now, just take the last one or header one.
+                    # Actually, ib_insync parses them well.
+                    values[item.tag] = val
                 except ValueError:
                     pass
+        
+        # Fallback map 'TotalCashValue' to 'AvailableFunds' if missing
+        if 'AvailableFunds' not in values and 'TotalCashValue' in values:
+            values['AvailableFunds'] = values['TotalCashValue']
+            
         return values
 
     def _get_active_stops(self) -> Dict[str, float]:
@@ -182,6 +213,10 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
         ib = self._connection.ib
         # Refresh orders from other clients (crucial if auto-bind failed)
         ib.reqAllOpenOrders()
+        
+        # Give IBKR time to return the open orders
+        self.sync(0.2)
+        
         trades = ib.openTrades()
         
         result = []
@@ -259,9 +294,12 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
             
             if request.stop_price and request.stop_price > 0:
                 order.auxPrice = request.stop_price
+            
+            print(f"  [DEBUG] Order Request: {request.action} {request.quantity} {request.symbol} @ {request.order_type} (TIF: {request.time_in_force}, Lmt: {request.limit_price}, Stp: {request.stop_price})")
                 
             # Place
             trade = ib.placeOrder(contract, order)
+            print(f"  [DEBUG] Broker Trade Status (Initial): {trade.orderStatus.status}")
             return str(trade.order.orderId)
             
         except Exception as e:
@@ -273,18 +311,26 @@ class BrokerDataSource(PortfolioReader, ConnectionAware, OrderManager):
         ib = self._connection.ib
         try:
             target_trade = None
+            # Refresh to ensure we see orders from other clients
+            ib.reqAllOpenOrders()
+            
             for trade in ib.openTrades():
-                # Check permId
-                if str(trade.order.permId) == str(order_id):
+                # Check permId or orderId
+                if str(trade.order.permId) == str(order_id) or str(trade.order.orderId) == str(order_id):
                     target_trade = trade
                     break
             
             if not target_trade:
-                # Secondary check in all orders if not found in openTrades
-                for order in ib.orders():
-                     if str(order.orderId) == str(order_id) or str(order.permId) == str(order_id):
-                         ib.cancelOrder(order)
-                         return True
+                print(f"❌ Error: Order {order_id} not found in open trades.")
+                return False
+
+            # Check if we are the owner
+            current_cid = self._connection.config.client_id
+            owner_cid = target_trade.order.clientId
+            
+            if current_cid != owner_cid:
+                print(f"⚠️ Warning: Order {order_id} is owned by Client {owner_cid}, but we are Client {current_cid}.")
+                print(f"   In IBKR, only the owner client can cancel its own orders.")
                 return False
 
             ib.cancelOrder(target_trade.order)

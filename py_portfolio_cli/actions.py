@@ -77,7 +77,8 @@ def action_place_order(service: PortfolioService):
             quantity=qty,
             order_type=order_type,
             limit_price=limit_price,
-            stop_price=stop_price
+            stop_price=stop_price,
+            time_in_force="GTC"
         )
         
         try:
@@ -94,7 +95,7 @@ def action_place_order(service: PortfolioService):
     else:
         print(" Abbruch.")
     
-    input("\nEnter zum Fortfahren...")
+    # Removed redundant Enter zum Fortfahren...
 
 
 def action_show_open_orders(service: PortfolioService):
@@ -107,7 +108,7 @@ def action_show_open_orders(service: PortfolioService):
         
     while True:
         clear_terminal()
-        print("\n--- 📋 Offene Orders ---")
+        print("\n--- 📋 Order Löschen ---")
         try:
             orders = ds.get_open_orders()
             if not orders:
@@ -125,12 +126,27 @@ def action_show_open_orders(service: PortfolioService):
                 print(f"[{i:<1}] {o.order_id:<10} {o.symbol:<6} {o.action:<4} {o.quantity:>6.0f} {o.order_type:<7} {price_info:<10} {o.status.value:<10}")
             
             print("-" * 65)
-            print("  Wähle [Nr] zum STORNIEREN oder [b] für Zurück.")
+            print("  Wähle:")
+            print("  [Nr]    Selektiere Order (Storno/Ändern)")
+            print("  [A]     STORNIERE ALLE")
+            print("  [Sym]   Storniere alle für Symbol (z.B. AAPL)")
+            print("  [b]     Zurück")
+            
             choice = input("\nAuswahl: ").strip().lower()
             
             if choice == 'b':
                 return
             
+            # 1. Cancel All
+            if choice == 'a':
+                if input("  ⚠️ Wirklich ALLE offenen Orders stornieren? [y/N]: ").lower() == 'y':
+                    print("  Sende Stornierungen...")
+                    for o in orders:
+                        ds.cancel_order(o.order_id)
+                    time.sleep(1)
+                continue
+
+            # 2. Try Numeric Selection
             try:
                 idx = int(choice)
                 if 1 <= idx <= len(orders):
@@ -181,16 +197,92 @@ def action_show_open_orders(service: PortfolioService):
                 else:
                     print("  Ungültige Nummer.")
                     time.sleep(1)
+                continue
             except ValueError:
-                if choice != 'b':
-                    print("  Ungültige Eingabe.")
+                pass
+
+            # 3. Check for Symbol Match
+            ticker_match = [o for o in orders if o.symbol.lower() == choice]
+            if ticker_match:
+                if input(f"  ⚠️ Wirklich alle {len(ticker_match)} Orders für {choice.upper()} stornieren? [y/N]: ").lower() == 'y':
+                    print(f"  Sende Stornierungen für {choice.upper()}...")
+                    for o in ticker_match:
+                        ds.cancel_order(o.order_id)
                     time.sleep(1)
+            else:
+                print("  Ungültige Eingabe oder Symbol nicht gefunden.")
+                time.sleep(1)
 
         except Exception as e:
             print(f"Fehler bei den Orders: {e}")
             input("Enter...")
             return
 
+
+
+
+def action_close_position(service: PortfolioService):
+    """Interactive workflow to close an existing position."""
+    ds = service.get_data_source()
+    if not ds or not isinstance(ds, OrderManager) or not service.is_broker_connected():
+        print("\n❌ Kein Broker verbunden.")
+        input("Enter...")
+        return
+
+    print("\n--- 📉 Position Glattstellen (Close) ---")
+    positions = service.get_open_positions()
+    
+    if not positions:
+        print("  Keine offenen Positionen.")
+        input("Enter...")
+        return
+        
+    for i, p in enumerate(positions, 1):
+        # Determine closing action
+        close_action = "SELL" if p.direction == "LONG" else "BUY"
+        print(f"  [{i}] {p.symbol:<6} {p.quantity:>6.0f} Stk @ {p.entry_price:.2f}  [Close: {close_action}]")
+        
+    print("  [0] Abbrechen")
+    
+    choice = input("\nWelche Position schließen? [1-{}]: ".format(len(positions))).strip()
+    try:
+        idx = int(choice)
+        if idx == 0: return
+        
+        if 1 <= idx <= len(positions):
+            target = positions[idx-1]
+            close_action = "SELL" if target.direction == "LONG" else "BUY"
+            
+            print(f"\nClosing: {close_action} {target.quantity} {target.symbol} via MKT Order")
+            confirm = input("Ausführen? [y/N]: ").strip().lower()
+            
+            if confirm == 'y':
+                req = OrderRequest(
+                    symbol=target.symbol,
+                    action=close_action,
+                    quantity=target.quantity,
+                    order_type="MKT",
+                    time_in_force="GTC"
+                )
+                
+                print(" Sende Close-Order...")
+                order_id = ds.place_order(req)
+                if order_id:
+                    print(f" ✅ Order gesendet! ID: {order_id}")
+                    # Log
+                    append_trade_log(service, req, order_id)
+                else:
+                    print(" ❌ Fehler beim Senden.")
+            else:
+                print(" Abgebrochen.")
+                
+            input("Enter...")
+            
+    except ValueError:
+        print("Ungültige Eingabe.")
+    except Exception as e:
+        print(f"Fehler: {e}")
+        input("Enter...")
 
 
 # --- Portfolio Actions ---
@@ -334,7 +426,7 @@ def action_update_prices(service: PortfolioService):
     # Show updated dashboard
     clear_terminal()
     render_dashboard(service)
-    input("\nDrücke Enter zum Fortfahren...")
+    # Removed redundant Enter zum Fortfahren...
 
 
 def action_clear_paper(service: PortfolioService):
@@ -406,11 +498,13 @@ def _connect_to_broker(service: PortfolioService):
     print(f"\nVerbinde zu {host}:{port} (Master Client ID: {client_id})...")
     
     try:
+        # Note: BrokerDataSource init now prints "Initialisiere..." and "Abonniere..."
         new_source = BrokerDataSource(
             host=host,
             port=port,
             client_id=client_id,
-            account_id=account_id
+            account_id=account_id,
+            auto_connect=True
         )
         
         if new_source.is_connected():
@@ -433,6 +527,15 @@ def _connect_to_broker(service: PortfolioService):
             print("⚠ Verbindung fehlgeschlagen.")
             
     except ConnectionError as e:
-        print(f"⚠ Verbindungsfehler: {e}")
+        print(f"\n❌ Verbindungsfehler: {e}")
+        print("\n💡 Mögliche Lösungen:")
+        print("  1. Prüfen Sie, ob TWS oder IB Gateway wirklich läuft.")
+        print(f"  2. Prüfen Sie in TWS/Gateway unter: 'Global Configuration' -> 'API' -> 'Settings':")
+        print("     - 'Enable ActiveX and Socket Clients' muss ANGEKREUZT sein.")
+        print(f"     - 'Socket Port' muss {port} entsprechen.")
+        print("  3. Prüfen Sie, ob 'Trusted IPs' Ihre IP (127.0.0.1) erlauben oder 'Prompt on connection' aktiv ist.")
+        print("  4. Stellen Sie sicher, dass keine andere App (z.B. TradingView, Dashboards) Client ID 0 belegt.")
     except Exception as e:
-        print(f"⚠ Fehler: {e}")
+        print(f"\n❌ Unerwarteter Fehler: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()

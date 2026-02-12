@@ -103,7 +103,9 @@ def render_dashboard(service: PortfolioService, sort_by: Optional[str] = None):
         stop_str = f"{stop_val:>9.2f}" if stop_val > 0 else f"{C_RED}{'0.00':>9}{C_RESET}"
         
         status_str = " ".join(p.status_flags) if p.status_flags else "-"
-        sym_display = (p.symbol[:7] + '..') if len(p.symbol) > 8 else p.symbol
+        dir_label = "(L)" if p.direction == "LONG" else "(S)"
+        sym_text = f"{p.symbol}{dir_label}"
+        sym_display = (sym_text[:7] + '..') if len(sym_text) > 8 else sym_text
         
         days_held = p.days_held if p.days_held is not None else 0
         pos_pct = p.pos_pct if p.pos_pct is not None else 0.0

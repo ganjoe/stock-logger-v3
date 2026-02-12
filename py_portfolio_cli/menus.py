@@ -15,7 +15,8 @@ from .actions import (
     action_init_paper, action_edit_paper_position,
     action_edit_paper_metrics, action_clear_paper,
     action_switch_data_source,
-    action_place_order, action_show_open_orders
+    action_place_order, action_show_open_orders,
+    action_close_position
 )
 
 
@@ -63,10 +64,11 @@ def show_live_menu(service: PortfolioService):
         print("\n=== 📈 LIVE PORTFOLIO ===")
         print(" [1] 📤 Trading (Order Entry)")
         print(" [2] 📝 Minervini Wizard (Live -> Order)")
-        print(" [3] 🔄 Marktdaten aktualisieren (Refresh)")
+        print(" [3] 🔄 Portfolio & Preise aktualisieren (Sync)")
         print(" [4] 🛑 Stop-Loss Manager")
-        print(" [5] 📋 Offene Orders")
+        print(" [5] 📋 Order Löschen")
         print(" [6] 📊 Portfolio anzeigen (Sortierbar)")
+        print(" [7] 📉 Position glattstellen (Close)")
         print("-" * 40)
         print(" [b] Zurück")
         
@@ -74,6 +76,8 @@ def show_live_menu(service: PortfolioService):
         if choice == 'b': return
         elif choice == '1':
              action_place_order(service)
+             # Force refresh after order
+             action_update_prices(service)
         elif choice == '2':
              run_sizing_wizard(service, source="live")
         elif choice == '3':
@@ -84,6 +88,9 @@ def show_live_menu(service: PortfolioService):
              action_show_open_orders(service)
         elif choice == '6':
              show_portfolio_viewer(service)
+        elif choice == '7':
+             action_close_position(service)
+             action_update_prices(service)
 
 
 def show_simulation_menu(service: PortfolioService):
@@ -158,11 +165,15 @@ def show_portfolio_viewer(service: PortfolioService):
         
         print("\n=== 📊 PORTFOLIO ANSICHT (SORTIERBAR) ===")
         print(" Wähle [1-12] zum Sortieren nach Spalte")
+        print(" [r] 🔄 Daten aktualisieren (Sync)")
         print(" [b] Zurück zum Hauptmenü")
         print("-" * 40)
         
-        choice = input("Sortierung/Zurück: ").strip().lower()
+        choice = input("Sortierung/Aktion: ").strip().lower()
         if choice == 'b':
             return
-        if choice in [str(i) for i in range(1, 13)]:
+        if choice == 'r':
+            from .actions import action_update_prices
+            action_update_prices(service)
+        elif choice in [str(i) for i in range(1, 13)]:
             render_dashboard(service, sort_by=choice) # Updates global SESSION_SORT_BY

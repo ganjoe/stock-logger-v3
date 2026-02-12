@@ -66,10 +66,17 @@ class IBKRConnection:
                 if attempt < self.config.retry_count:
                     time.sleep(self.config.retry_delay)
                 else:
+                    err_msg = str(e)
+                    if "Connection refused" in err_msg:
+                        detail = "Connection refused (Check 'Enable API' settings in TWS/Gateway)"
+                    elif "timeout" in err_msg.lower():
+                        detail = "Connection timeout (Check Host/Port and Firewall)"
+                    else:
+                        detail = err_msg
+                        
                     raise ConnectionError(
                         f"Failed to connect to IBKR at {self.config.host}:{self.config.port} "
-                        f"after {self.config.retry_count} attempts. "
-                        f"Ensure TWS/Gateway is running. Error: {e}"
+                        f"after {self.config.retry_count} attempts. Details: {detail}"
                     )
         
         return False

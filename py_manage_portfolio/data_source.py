@@ -51,7 +51,7 @@ class OrderRequest:
     order_type: str    # 'LMT', 'MKT', 'STP', 'STP LMT'
     limit_price: Optional[float] = None
     stop_price: Optional[float] = None
-    time_in_force: str = "DAY" # 'DAY', 'GTC'
+    time_in_force: str = "GTC" # 'DAY', 'GTC'
 
 
 class PortfolioReader(ABC):
