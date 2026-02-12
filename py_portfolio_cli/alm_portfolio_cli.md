@@ -17,14 +17,14 @@ Es ist vollständig von der Business-Logik (`py_manage_portfolio`) getrennt.
 | ID | Category | Title | Description | Covered By |
 |----|----------|-------|-------------|------------|
 | F-CLI-010 | Menu | Hauptmenü | Anzeige des dreiteiligen Hauptmenüs (Live / Sim / Broker Connect) mit Status-Anzeige (Online/Offline). | menus.show_menu |
-| F-CLI-020 | Menu | Live Sub-Menü | Loop mit Dashboard-Anzeige, Trading-Funktion, Wizard, Refresh, Stop-Loss Manager. | menus.show_live_menu |
+| F-CLI-020 | Menu | Live Sub-Menü | Loop mit Dashboard-Anzeige, Trading-Funktion, Wizard, Refresh, Stop-Loss Manager, Order Löschen. | menus.show_live_menu |
 | F-CLI-030 | Menu | Simulation Sub-Menü | Menü mit Import, Add/Edit, Wizard, Reset. | menus.show_simulation_menu |
 | F-CLI-040 | Connection | Master Client | Standardisierung auf Client ID 0 für Broker-Synchronisation zur Vermeidung von Konflikten. | actions._connect_to_broker |
 | F-CLI-050 | Menu | Sortierbare Ansicht | Neues Menü-Item in den Portfolio-Untermenüs für eine reine Lese-Ansicht mit Auswahl der Sortierung [1-12]. | menus.show_portfolio_viewer |
 | F-CLI-100 | Action | Stop-Loss Manager | Interaktiver Editor: Position wählen, Stop setzen (Market/Limit), Stop löschen ('remove'). | actions.action_manage_stops |
 | F-CLI-110 | Action | Paper Init | Clone des Live-Portfolios in die Simulation mit Bestätigung. | actions.action_init_paper |
 | F-CLI-115 | Trading | Live Real Trading | Das System führt echte Transaktionen über den Broker aus (Buy/Sell, Limit/Stop/Stop-Limit). | actions.action_place_order |
-| F-CLI-117 | Trading | Order Management | Interaktives Untermenü in 'Offene Orders' zum Stornieren oder Ändern (Edit) von Broker-Aufträgen. | actions.action_show_open_orders |
+| F-CLI-117 | Trading | Order Management | Modul 'Order Löschen' zum Stornieren (Einzeln, Ticker, Global via 'A') oder Ändern von Broker-Aufträgen. | actions.action_show_open_orders |
 | F-CLI-120 | Action | Position bearbeiten | Sub-Menü: Löschen, Stop bearbeiten, Qty bearbeiten einer Sim-Position. | actions.action_edit_paper_position |
 | F-CLI-130 | Action | Metriken bearbeiten | Manuelle Anpassung von Equity und Exposure im Paper-Modus. | actions.action_edit_paper_metrics |
 | F-CLI-140 | Action | Marktdaten Update | Aktualisierung der Marktpreise und Snapshot-Speicherung. | actions.action_update_prices |
@@ -32,10 +32,11 @@ Es ist vollständig von der Business-Logik (`py_manage_portfolio`) getrennt.
 | F-CLI-160 | Action | Datenquelle wechseln | Umschalten zwischen Offline und Broker Data Source. | actions.action_switch_data_source |
 | F-CLI-200 | Wizard | Minervini Sizing | 4-Schritte-Dialog: Portfolio Status → Trade Parameter → Analyse (Trichter) → Speichern. | wizard.run_sizing_wizard |
 | F-CLI-210 | Wizard | Schritt 1 | Erfassung von Equity, Exposure, Ziel-Exposure mit Defaults aus Journal. | wizard.wizard_step_1_get_context |
-| F-CLI-220 | Wizard | Schritt 2 | Erfassung von Symbol, Entry, Stop, Risk%, MaxSize%, Fee. | wizard.wizard_step_2_get_params |
+| F-CLI-220 | Wizard | Schritt 2 | Erfassung von Symbol, Entry-Typ (MKT/LMT/STP, Default: MKT), Entry, Stop, Risk, MaxSize, Fee. | wizard.wizard_step_2_get_params |
 | F-CLI-230 | Wizard | Dual Wizard Mode | Unterstützung für 'Minervini Wizard (Live)' und 'Minervini Wizard (Paper)' im CRM. | menus.show_simulation_menu |
 | F-CLI-240 | Wizard | Manual Override | Option zur manuellen Korrektur des berechneten Vorschlagswertes im Wizard. | wizard.run_sizing_wizard |
 | F-CLI-250 | Wizard | Scenario Summary | Abschluss-Zusammenfassung inkl. neuem Exposure %, Risiko an Equity und R-Zielen. | wizard.run_sizing_wizard |
+| F-CLI-260 | Trading | GTC Standard | Alle Broker-Orders (Entry/Stop) werden standardmäßig als 'Good-Til-Cancelled' (GTC) übermittelt. | data_source.OrderRequest |
 | F-CLI-300 | Display | Dashboard | Minervini-Dashboard mit farbcodierten Metriken (incl. Qty, AvgPrice, Gain%, Risk%, R-Multiple). | formatter.render_dashboard |
 | F-CLI-310 | Utility | Dezimal-Parsing | Robustes Parsing von Benutzereingaben (Komma/Punkt-Handling). | utils.parse_input_decimal |
 | F-CLI-320 | Utility | Stop-Loss Prompt | Validierte Eingabe eines Stop-Loss mit Richtungsprüfung (Long/Short). | utils.prompt_stop_loss |
