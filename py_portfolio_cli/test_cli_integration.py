@@ -622,7 +622,7 @@ def print_manual_checklist():
  Starte mit: python run_manage_portfolio.py
 
  [ ] M-01: Hauptmenü → [3] Broker Connect
-          → Host: 127.0.0.1, Port: 4001
+          → Host: 127.0.0.1, Port: 4002
           → Erwartung: Status wechselt zu 🟢 ONLINE
           → Account-ID wird angezeigt
 
