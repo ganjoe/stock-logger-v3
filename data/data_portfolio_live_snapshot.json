@@ -1,6 +1,154 @@
 {
-    "timestamp": "2026-02-12T22:24:22.436830",
-    "cash": 1015658.15,
-    "equity": 1015659.49,
-    "positions": {}
+    "timestamp": "2026-02-13T21:57:10.308503",
+    "cash": 11971.9,
+    "equity": 12431.91,
+    "positions": {
+        "NVDA": {
+            "symbol": "NVDA",
+            "quantity": 2.0,
+            "entry_price": 186.55,
+            "current_price": 182.5700073,
+            "currency": "USD",
+            "isin": null,
+            "entry_date": null,
+            "direction": "LONG",
+            "stop_loss": 170.05,
+            "stop_limit_price": null,
+            "stop_type": "STP",
+            "initial_risk": 33.0,
+            "days_held": 0,
+            "pos_pct": 2.9371191924651963,
+            "risk_pct": 0.20141727699122622,
+            "dist_pct": 6.8576473677995935,
+            "status_flags": [
+                "\u26a0Loss"
+            ]
+        },
+        "QBTS": {
+            "symbol": "QBTS",
+            "quantity": 20.0,
+            "entry_price": 22.27,
+            "current_price": 19.6612606,
+            "currency": "USD",
+            "isin": null,
+            "entry_date": null,
+            "direction": "SHORT",
+            "stop_loss": 24.36,
+            "stop_limit_price": null,
+            "stop_type": "STP",
+            "initial_risk": 41.8,
+            "days_held": 0,
+            "pos_pct": 3.163031360426515,
+            "risk_pct": 0.7559159292498097,
+            "dist_pct": 23.898464577596826,
+            "status_flags": [
+                "OK"
+            ]
+        },
+        "TDW": {
+            "symbol": "TDW",
+            "quantity": 5.0,
+            "entry_price": 51.9081,
+            "current_price": 69.8899994,
+            "currency": "USD",
+            "isin": null,
+            "entry_date": null,
+            "direction": "LONG",
+            "stop_loss": 63.0,
+            "stop_limit_price": 62.99,
+            "stop_type": "STP LMT",
+            "initial_risk": 55.45950000000001,
+            "days_held": 0,
+            "pos_pct": 2.8109115735232955,
+            "risk_pct": 0.27710944657739617,
+            "dist_pct": 9.858348060023012,
+            "status_flags": [
+                "Trail"
+            ]
+        },
+        "TMDX": {
+            "symbol": "TMDX",
+            "quantity": 2.0,
+            "entry_price": 129.64,
+            "current_price": 129.4314728,
+            "currency": "USD",
+            "isin": null,
+            "entry_date": null,
+            "direction": "LONG",
+            "stop_loss": 126.6,
+            "stop_limit_price": 126.58999999999999,
+            "stop_type": "STP LMT",
+            "initial_risk": 6.079999999999984,
+            "days_held": 0,
+            "pos_pct": 2.0822459750754305,
+            "risk_pct": 0.04555169398748865,
+            "dist_pct": 2.187623101821028,
+            "status_flags": [
+                "\u26a0Loss"
+            ]
+        },
+        "USAR": {
+            "symbol": "USAR",
+            "quantity": 2.0,
+            "entry_price": 27.62,
+            "current_price": 19.4200001,
+            "currency": "USD",
+            "isin": null,
+            "entry_date": null,
+            "direction": "LONG",
+            "stop_loss": null,
+            "stop_limit_price": null,
+            "stop_type": "STP",
+            "initial_risk": null,
+            "days_held": 0,
+            "pos_pct": 0.3124218257693307,
+            "risk_pct": null,
+            "dist_pct": null,
+            "status_flags": [
+                "\u274cNoStop"
+            ]
+        },
+        "XDEF": {
+            "symbol": "XDEF",
+            "quantity": 15.0,
+            "entry_price": 33.192,
+            "current_price": 31.87999915,
+            "currency": "EUR",
+            "isin": null,
+            "entry_date": null,
+            "direction": "LONG",
+            "stop_loss": null,
+            "stop_limit_price": null,
+            "stop_type": "STP",
+            "initial_risk": null,
+            "days_held": 0,
+            "pos_pct": 3.8465528406334983,
+            "risk_pct": null,
+            "dist_pct": null,
+            "status_flags": [
+                "\u274cNoStop"
+            ]
+        },
+        "ARW": {
+            "symbol": "ARW",
+            "quantity": 2.0,
+            "entry_price": 156.96,
+            "current_price": 155.99357605,
+            "currency": "USD",
+            "isin": null,
+            "entry_date": null,
+            "direction": "LONG",
+            "stop_loss": 143.4,
+            "stop_limit_price": null,
+            "stop_type": "STP",
+            "initial_risk": 27.120000000000005,
+            "days_held": 0,
+            "pos_pct": 2.509567331970711,
+            "risk_pct": 0.20260082400853927,
+            "dist_pct": 8.073137605335381,
+            "status_flags": [
+                "\u26a0Loss"
+            ]
+        }
+    }
 }

@@ -1,0 +1,2 @@
+date;time;Trade_PnL;Trade_R;Fee;Cashflow;Dividend;Equity;Cash;Total_Assets;Drawdown;Sum_Deposit;Sum_Withdrawal;Sum_Dividend;Sum_Fee;Trade_Count;Open_Positions;event;symbol;quantity;price;ticker;ordertyp
+2026-02-13;21:49:43;0.00;0;2.00;0.00;0.00;12436.17;11981.88;1875.92;0.00;0.00;0.00;0.00;0.00;0;6;buy;ARW;2.00;0.00;ARW;MKT
